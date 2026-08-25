@@ -1,0 +1,51 @@
+# Secrets & config
+.env
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Data (can be large)
+finance_agent/data/market_data/*.csv
+finance_agent/data/fundamentals/*.csv
+finance_agent/data/documents/*.pdf
+
+# ChromaDB vector store
+chroma_db/
+.chroma_db/
+.chroma/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/

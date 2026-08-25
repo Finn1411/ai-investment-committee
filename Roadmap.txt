@@ -1,0 +1,122 @@
+Finance Agent — Strategic Roadmap & Next Steps
+Current State Assessment
+After the MSFT and PLTR live runs, the system is producing professional-grade research output. Key benchmarks:
+
+Metric	Status	Quality
+Data pipeline (52 metrics)	✅	Accurate, all computed locally
+7 reasoning agents	✅	Sharp, data-grounded, no hallucination
+Disagreement detection	✅	Correctly flagging PLTR/MSFT splits
+Invalidation criteria	✅	Specific, measurable, useful
+Model cascade	✅	Self-healing on quota/404
+CLI usability	✅	Works, but not friend-showable
+UI for non-technical users	❌	Not built yet — highest priority
+Proposed Roadmap: Weeks 5–9+
+Week 5 — Backtesting & Calibration Engine
+"Does the system's confidence actually match reality?"
+
+Goal: Build the anti-self-deception layer. Track every prediction, score accuracy, expose when the system is overconfident.
+
+Prediction Journal — already logging. Add actual_return field for resolved predictions
+Brier Score — probability calibration: if system says 70% chance of positive return, it should be right ~70% of the time
+Hit Rate by Rating — what % of BUY calls outperform? AVOID calls avoid drawdowns?
+Alpha vs Benchmark — do recommendations beat the S&P 500?
+Confidence Calibration Chart — are 90% confidence calls actually right 90% of the time?
+
+python -m finance_agent backtest --resolve AAPL --actual-return 0.12
+python -m finance_agent backtest --stats
+Week 6 — Intelligence Upgrades
+"Make the agents smarter and the analysis deeper."
+
+Goal: Add data sources and analytical depth that improve report quality.
+
+Macro Regime Detection — VIX level, yield curve shape, inflation regime. BearAnalyst should be more aggressive in risk-off environments
+Peer / Sector Comparison — when analyzing PLTR, automatically compare vs CRM, SNOW, MDB. Adds crucial relative valuation context
+News Sentiment Layer — fetch recent headlines (via free API), score sentiment, feed as context to EarningsAnalyst
+Earnings Calendar — flag upcoming earnings dates as risk events in the report
+Insider Transactions — unusually large insider sells are a warning signal
+Week 7 — Web UI (Highest Impact for Showing to Friends)
+"From CLI tool to a product."
+
+Architecture:
+
+
+┌─────────────────┐     REST API     ┌──────────────────┐
+│  React + Vite   │  ←————————————→  │  FastAPI Backend │
+│  (Frontend)     │                  │  (Python)        │
+│  Port 5173      │                  │  Port 8000       │
+└─────────────────┘                  └──────────────────┘
+                                              │
+                                     Existing Finance Agent
+                                     (pipeline, committee, db)
+UI Features — Page by Page:
+
+🏠 Dashboard
+Watchlist of analyzed stocks with rating badges (BUY/HOLD/AVOID)
+Mini score bars per stock
+"Run New Analysis" search bar (type ticker → run)
+Last updated timestamp
+📊 Analysis Page (per ticker)
+Live streaming progress: agent by agent as they run
+Score donut chart with agent breakdown
+Bull vs Bear case side-by-side cards
+Interactive scenario chart (bear/base/bull return bars)
+Full investment thesis + invalidation criteria
+📈 Performance Tracker
+Accuracy over time chart
+Brier score calibration graph
+BUY vs S&P 500 comparison chart
+Prediction journal table
+⚙️ Settings
+Model selection
+Horizon preference
+Portfolio context input
+Tech stack:
+
+Backend: FastAPI (Python) — thin wrapper over existing engine
+Frontend: React + Vite with Recharts for charts
+Streaming: Server-Sent Events (SSE) for live agent progress
+Styling: Premium dark mode, glassmorphism, animated score bars
+Week 8 — Alerts & Automation
+"The system watches your portfolio while you sleep."
+
+Watchlist Monitor — scheduled daily runs on a list of tickers
+Invalidation Alert — if a metric crosses a threshold you set, get a notification
+Email/Desktop Alerts — smtplib for email, win10toast for Windows notifications
+Weekly Summary Report — auto-generated markdown digest of portfolio changes
+PDF Export — professional PDF reports to share with friends without running anything
+Week 9 — Polish & Advanced Features
+"The 10% that makes it feel like 100% more."
+
+Fix bull summary truncation (cosmetic bug from current output)
+Multi-ticker comparison view — analyze AAPL vs MSFT vs GOOGL side-by-side
+Sector screener — "scan all S&P 500 tech stocks, show me highest-scoring ones"
+Confidence intervals on metrics — show when fundamental data is stale or estimated
+Dark/Light mode toggle
+Mobile-responsive layout
+New Ideas Beyond the Original Masterplan
+💡 Committee Memory
+Store past verdicts and show trend: "MSFT was HOLD last month, now HOLD — no change" vs "PLTR was BUY last month, now HOLD — degrading thesis."
+
+💡 Thesis Conflict Detection
+When the same ticker is analyzed twice, automatically compare theses and flag contradictions. Prevents the system from silently flip-flopping.
+
+💡 "Why did the rating change?" Explainer
+When a rating changes between runs, generate a diff-style explanation: "Score dropped 1.2 pts because FCF margin fell from 46.9% → 38.2% and BearAnalyst raised threat level."
+
+💡 Scenario Stress Testing
+Let the user drag a slider: "What if revenue growth falls to 20%?" → recalculate scenario probabilities in real-time without a new LLM call.
+
+Recommended Priority Order
+
+Week 5:  Backtesting + calibration  ← intellectual foundation
+Week 7:  Web UI                     ← highest "wow" factor, show to friends
+Week 6:  Intelligence upgrades      ← improves report quality
+Week 8:  Automation / alerts        ← makes it a real product
+Week 9:  Polish                     ← makes it feel premium
+IMPORTANT
+
+Week 7 (UI) has the highest return on investment for your goal of showing this to friends. A beautiful web interface makes the tool feel real and accessible. I'd recommend doing a lightweight version of backtesting (Week 5) first for intellectual integrity, then jumping to the UI (Week 7) before adding more data sources.
+
+TIP
+
+The FastAPI backend for the UI takes roughly 1–2 hours to wire up since the engine is already built. The React frontend is where most of the creative work happens. You'll be able to show a running prototype to friends within a single session.

@@ -1,0 +1,30 @@
+# Finance Agent — System Configuration
+# Secrets go in .env, not here.
+
+llm:
+  provider: google
+  model: gemini-3.5-flash   # Primary | fallback: gemini-3.1-flash-lite -> gemini-3.6-flash
+  temperature: 0.2
+  max_tokens: 8192
+
+app:
+  benchmark: "^GSPC"             # S&P 500
+  default_horizon_months: 12
+  max_position_size_pct: 10.0    # % of total portfolio
+  max_sector_exposure_pct: 30.0
+
+# Committee scoring weights (Phase 4)
+committee_weights:
+  business_quality: 0.20
+  financial_strength: 0.15
+  valuation: 0.20
+  growth: 0.15
+  catalysts: 0.10
+  risk: 0.15
+  portfolio_fit: 0.05
+
+# Scenario thresholds for Bear/Bull classification
+scenarios:
+  bear_threshold: -0.15     # Returns <= -15% → Bear scenario
+  bull_threshold: 0.25      # Returns >= +25% → Bull scenario
+  monte_carlo_simulations: 10000

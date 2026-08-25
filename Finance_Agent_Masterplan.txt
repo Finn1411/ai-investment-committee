@@ -1,0 +1,309 @@
+FINANCE AGENT – PROFESSIONAL MASTERPLAN
+
+Your original approach already has a good basic architecture: Data → specialized analysts → Committee → Automation. However, for a truly professionally usable private Finance Agent, the system should not primarily attempt to predict exact stock prices. The goal should instead be a reproducible research and decision system that generates probabilistic scenarios, tests them against historical data, and continuously measures its own quality.
+
+Guiding Principle:
+* Not: "LLMs predict which stock will rise."
+* But rather: "A data-driven investment research system evaluates probabilities, risks, scenarios, and the quality of its own forecasts."
+
+======================================================================
+PHASE 0 – GOAL DEFINITION & MEASUREMENT SYSTEM
+======================================================================
+
+Before the first agent is built, the decision rules must be defined. 
+
+For each analysis:
+* Investment horizon: 3 months / 12 months / 3–5 years
+* Benchmark: e.g., MSCI World, S&P 500, or a sector-specific index
+* Target variable:
+    * Expected return
+    * Probability of an outperformance
+    * Downside risk
+* Maximum position size
+* Maximum portfolio and sector exposure
+* Clear definition of what "Buy", "Hold", and "Avoid" means
+
+The system should not only store ratings but also automatically review each forecast later.
+
+Example:
+Prediction:
+Ticker: AAPL
+Date: 20.08.2026
+Expected 12M Return: +14%
+Probability Outperform Benchmark: 68%
+Bear Case: -22%
+Base Case: +12%
+Bull Case: +35%
+Confidence: 0.72
+
+After 3 / 6 / 12 months, the forecast is automatically evaluated.
+
+======================================================================
+PHASE 1 – PROFESSIONAL DATA LAYER
+======================================================================
+
+The data architecture should not merely retrieve individual metrics, but provide a central, structured database.
+
+Project Structure:
+finance_agent/
+├── data/
+│   ├── market_data/
+│   ├── fundamentals/
+│   ├── earnings/
+│   ├── macro/
+│   ├── news/
+│   └── documents/
+├── agents/
+├── models/
+├── backtesting/
+├── portfolio/
+├── evaluation/
+└── database/
+
+1. Market Data (Per Stock):
+* Open / High / Low / Close / Volume
+* Returns over various timeframes
+* Volatility
+* Beta
+* Drawdowns
+* Relative strength
+* Liquidity
+* Valuation in historical comparison
+
+2. Fundamentals:
+* Profitability: Gross Margin, Operating Margin, Net Margin, ROIC, ROE
+* Cash Flow: Free Cash Flow, FCF Margin, FCF Yield, Cash Conversion
+* Balance Sheet Quality: Net Debt / EBITDA, Interest Coverage, Current Ratio, Debt Maturity
+* Growth: Revenue CAGR, EPS CAGR, FCF CAGR, Margin development
+* Valuation: P/E, Forward P/E, EV/EBIT, EV/EBITDA, Price/Sales, FCF Yield
+
+3. Data Quality Agent:
+Before any analyst receives data, a Data Quality Agent checks:
+* Are data missing?
+* Are units consistent?
+* Are there obvious outliers?
+* Was a split taken into account?
+* Is the metric up-to-date?
+* Do quarterly and annual data match?
+* Which data are estimated and which are reported?
+
+Basic Rule: LLMs should never directly interpret unvalidated raw data.
+
+======================================================================
+PHASE 2 – THE RESEARCH TEAM
+======================================================================
+
+Instead of just three agents, a professional research team should consist of specialized roles.
+
+AGENT 1: FUNDAMENTAL ANALYST
+* Task: "How healthy and economically strong is the company?"
+* Evaluates: Business Quality, Financial Strength, Profitability Trends, core strengths, core weaknesses.
+
+AGENT 2: VALUE ANALYST
+* Analyzes: Historical valuation ranges, Peer Comparison, Reverse DCF, FCF Yield, Margin of Safety.
+* Central Question: "What expectations are already priced into the current stock price?"
+
+AGENT 3: GROWTH & BUSINESS ANALYST
+* Analyzes: Revenue growth, TAM, Scalability, Pricing Power, Competitive advantages, Unit Economics, Management Execution.
+* Important Distinction: Narrative Growth vs. Fundamental Growth.
+
+AGENT 4: EARNINGS & CATALYST ANALYST
+* Searches for possible drivers: Earnings Dates, new products, regulatory decisions, margin changes, Guidance Changes, stock buybacks, M&A, insider activity.
+
+AGENT 5: RISK MANAGER
+* Creates a structured Risk Register (e.g., Balance Sheet, Competition, Valuation Compression risks).
+* Additionally evaluates: Bear Case, Maximum Historical Drawdown, Scenario analysis, Concentration risk, Sector and macro risk.
+
+AGENT 6: BEAR ANALYST / DEVIL'S ADVOCATE
+* This agent receives the positive analyses and has only one task: "Why could this investment thesis be wrong?"
+* It must not simply summarize the other agents; it must actively try to refute the investment thesis.
+* Goal: Reduce groupthink.
+
+AGENT 7: PORTFOLIO MANAGER
+* The task is not only: "Is this stock good?"
+* But rather: "Does this stock make sense in the context of my existing portfolio?"
+* Considers: Existing positions, correlations, sector weighting, country risk, factor exposure, position size.
+* Basic Principle: An excellent stock can still be a bad portfolio decision.
+
+======================================================================
+PHASE 3 – QUANT LAYER BEFORE THE LLM
+======================================================================
+
+Mathematical calculations must not be taken over by the LLM.
+
+Architecture:
+RAW DATA
+↓
+Python / Quant Engine
+↓
+Deterministic Calculations
+↓
+Validated Metrics
+↓
+Agents interpret results
+
+The Quant Engine calculates, for example:
+* CAGR, Sharpe Ratio, Sortino Ratio, Maximum Drawdown, Beta.
+* Historical valuation percentiles, DCF, Monte Carlo simulations, scenario analyses, factor exposure.
+
+======================================================================
+PHASE 4 – COMMITTEE SYSTEM
+======================================================================
+
+The Head of Committee should not decide freely and subjectively on Buy/Hold/Sell.
+
+Instead:
+Data Validation
+↓
+Fundamental / Growth / Value Analyst
+↓
+Risk Manager
+↓
+Bear Analyst
+↓
+Committee Engine
+↓
+Portfolio Manager
+↓
+Final Recommendation
+
+The Committee Engine uses a transparent scoring system.
+Example Weights: 
+* Business Quality: 20%
+* Financial Strength: 15%
+* Valuation: 20%
+* Growth: 15%
+* Catalysts: 10%
+* Risk: 15%
+* Portfolio Fit: 5%
+
+Important: These weights should later be verified by backtesting and not assumed to be permanently correct.
+
+======================================================================
+PHASE 5 – PROBABILITY FORECASTING INSTEAD OF EXACT PRICE PREDICTION
+======================================================================
+
+No output like: "Apple will cost 245 € in 12 months."
+
+Instead, use a 12-Month Scenario Model:
+
+Bear Case:
+Probability: 25%
+Expected Return: -28%
+
+Base Case:
+Probability: 50%
+Expected Return: +12%
+
+Bull Case:
+Probability: 25%
+Expected Return: +42%
+
+Expected Value: +10.5%
+Probability of Outperforming Benchmark: 64%
+Probability of >20% Drawdown: 31%
+
+The goal is probabilistic decision support instead of an apparently precise point forecast.
+
+======================================================================
+PHASE 6 – BACKTESTING & ANTI-SELF-DECEPTION
+======================================================================
+
+For each historical analysis, the following must be saved: 
+timestamp, ticker, data available at that time, agent outputs, scores, final recommendation, confidence, expected return, benchmark.
+
+Then various quality metrics are calculated:
+1. Hit Rate: How often was the direction correct?
+2. Alpha: Did the system beat the benchmark?
+3. Calibration: If the agent indicates a probability of 70%, does the event historically actually occur in approximately 70% of cases?
+4. Confidence Accuracy: Are high-confidence predictions actually better than low-confidence predictions?
+   * Result: If an agent is overconfident (e.g., says 90% confidence, but is historically only correct 55% of the time), the confidence must be calibrated.
+
+======================================================================
+PHASE 7 – PREDICTION JOURNAL
+======================================================================
+
+Every investment decision receives an immutable ID. 
+(e.g., PREDICTION #00421 | Ticker: MSFT | Date: 2026-08-20)
+
+It logs the Thesis, Expected Return, Confidence, Key Risks, and Invalidation Criteria. After the Review Date, it records the ACTUAL RESULT (Return, Benchmark, Result, and Reason).
+
+Goal: The system should recognize which types of errors occur repeatedly.
+
+======================================================================
+PHASE 8 – RAG WITH CLEAR SOURCE HIERARCHY
+======================================================================
+
+The RAG system should prioritize sources according to quality.
+
+* TIER 1 – PRIMARY SOURCES: Annual reports, quarterly reports, earnings calls, investor presentations, regulatory filings.
+* TIER 2 – HIGH-QUALITY SECONDARY SOURCES: Reputable financial news, industry reports.
+* TIER 3 – MARKET OPINIONS: Analyst opinions, blogs, social media.
+
+Every important claim should be stored structurally (claim, source, source date, source type, confidence) to ensure traceability of why the agent makes a certain statement.
+
+======================================================================
+PHASE 9 – RECOMMENDED OVERALL TECHNICAL ARCHITECTURE
+======================================================================
+
+Data Sources
+↓
+Data Validation
+↓
+Feature / Quant Engine
+↓
+Fundamental / Growth / Value Agents
+↓
+Risk Manager + Bear Agent
+↓
+Committee Engine
+↓
+Portfolio Manager
+↓
+Prediction Journal + Backtesting
+↓
+Dashboard
+
+======================================================================
+RECOMMENDED IMPLEMENTATION ROADMAP
+======================================================================
+
+* WEEK 1 – SOLID FOUNDATION: Python project structure, data model, data validation, 30–50 metrics, SQLite or PostgreSQL, Logging.
+* WEEK 2 – QUANT ENGINE: Valuation models, historical percentiles, risk analysis, Bull/Base/Bear scenarios.
+* WEEK 3 – FIRST AGENTS: Fundamental Analyst, Value Analyst, Growth Analyst, Risk Manager, Bear / Devil's Advocate.
+* WEEK 4 – COMMITTEE: Structured JSON Output, Scoring, Disagreement Detection, Thesis, Invalidation Criteria.
+* WEEK 5 – EVALUATION: Prediction Journal, historical testing, benchmark comparison, Confidence Calibration.
+* WEEK 6 – AUTOMATION: Only now: Watchlist, automatic updates, database, dashboard, n8n, Reporting.
+
+======================================================================
+THE MOST IMPORTANT DESIGN PRINCIPLE
+======================================================================
+
+The Agent should not be understood as an "AI Stock Predictor."
+Better: AI Investment Research & Forecasting System.
+
+The end product should not claim: "Buy stock X, it will rise."
+But rather: "Based on the data available at the time of analysis, the estimated probability of an outperformance against Benchmark X over 12 months is Y%. The investment thesis is based on A, B, and C. It becomes invalid if D, E, or F occur."
+
+The system thereby becomes:
+* Measurable
+* Auditable
+* Reproducible
+* Backtestable
+* Less prone to hallucinations
+* Continuously improvable over the long term
+
+ULTIMATE GOAL
+Do not build an agent that sounds as convincing as possible. Build a system that:
+1. Collects high-quality data.
+2. Automatically validates it.
+3. Performs calculations deterministically.
+4. Analyzes specialized perspectives separately.
+5. Actively seeks counterarguments.
+6. Delivers probabilities instead of apparently precise forecasts.
+7. Saves every prediction.
+8. Can later be measured against real results.
+9. Recognizes errors and overconfidence.
+10. Can thus be systematically improved over time.
+
+Note: The system is intended as a private research and decision support and does not replace your own verification of data or professional investment advice.
