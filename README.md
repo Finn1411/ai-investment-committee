@@ -14,19 +14,19 @@ A **data-driven investment research system** that evaluates probabilities, risks
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-* **🧠 Multi-Agent Committee**: 7 independent LLM agents (Fundamental, Value, Growth, Earnings, Risk, Bear, and Committee Lead) analyze the data, debate, and form a consensus rating (BUY / HOLD / AVOID).
-* **📊 Deterministic Quant Engine**: LLMs *never* do math. A Python quant engine calculates 45+ metrics (DCF, Piotroski F-Score, Altman Z-Score, Scenarios, etc.) before the agents ever see the data.
-* **🌐 RAG News Ingestion**: Automatically scrapes real-time news from Yahoo Finance, extracts factual claims using Gemini structured outputs, stores them in a local ChromaDB, and injects them into the agents' context to prevent hallucinations.
-* **🌍 Macro & Peer Awareness**: Dynamically detects the market regime (Risk-On/Off via VIX and 10Y Yield) and benchmarks the stock's relative strength against direct competitors.
-* **📓 Prediction Journal**: Every decision is permanently logged to a local SQLite database for future backtesting, accountability, and accuracy calibration.
-* **💻 Premium Web Dashboard**: A stunning glassmorphic dark-mode web UI to run analyses, view streaming agent thoughts, and track historical predictions.
-* **🚨 Automated Desktop Alerts**: A background monitor script that scans your database daily and triggers native Windows Desktop Notifications if a stock is downgraded.
+* **Multi-Agent Committee**: 7 independent LLM agents (Fundamental, Value, Growth, Earnings, Risk, Bear, and Committee Lead) analyze the data, debate, and form a consensus rating (BUY / HOLD / AVOID).
+* **Deterministic Quant Engine**: LLMs *never* do math. A Python quant engine calculates 45+ metrics (DCF, Piotroski F-Score, Altman Z-Score, Scenarios, etc.) before the agents ever see the data.
+* **RAG News Ingestion**: Automatically scrapes real-time news from Yahoo Finance, extracts factual claims using Gemini structured outputs, stores them in a local ChromaDB, and injects them into the agents' context to prevent hallucinations.
+* **Macro & Peer Awareness**: Dynamically detects the market regime (Risk-On/Off via VIX and 10Y Yield) and benchmarks the stock's relative strength against direct competitors.
+* **Prediction Journal**: Every decision is permanently logged to a local SQLite database for future backtesting, accountability, and accuracy calibration.
+* **Premium Web Dashboard**: A stunning glassmorphic dark-mode web UI to run analyses, view streaming agent thoughts, and track historical predictions.
+* **Automated Desktop Alerts**: A background monitor script that scans your database daily and triggers native Windows Desktop Notifications if a stock is downgraded.
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 * **Backend**: FastAPI, Python 3.11+
 * **LLM**: Google Gemini API (`gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-embedding-2`)
@@ -37,7 +37,7 @@ A **data-driven investment research system** that evaluates probabilities, risks
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone & Environment Setup
 ```bash
@@ -73,7 +73,7 @@ python -c "from finance_agent.database.db import init_db; init_db()"
 
 ---
 
-## 💻 Usage
+## Usage
 
 ### Launch the Web Dashboard (Recommended)
 Start the FastAPI server:
@@ -90,7 +90,7 @@ python -m finance_agent.automation.monitor
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```text
 Data Sources (YFinance, News)
@@ -114,7 +114,7 @@ Web Dashboard / Desktop Alerts
 
 ---
 
-## 📜 Principles
+## Principles
 
 1. **LLMs never do math.** All calculations are deterministic.
 2. **Data is validated before agents see it.**
