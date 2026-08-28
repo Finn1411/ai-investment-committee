@@ -116,6 +116,29 @@ def analyze_stock(ticker: str, req: AnalyzeRequest):
     formatter = ReportFormatter(result)
     return formatter.to_dict()
 
+@app.get("/api/watchlist/last-analyses")
+def get_last_analyses():
+    """Get the most recent prediction for each watchlisted ticker."""
+    with get_session() as session:
+        stocks = session.query(StockORM).all()
+        result = {}
+        for s in stocks:
+            latest = (
+                session.query(PredictionORM)
+                .filter_by(ticker=s.ticker)
+                .order_by(PredictionORM.created_at.desc())
+                .first()
+            )
+            if latest:
+                committee = json.loads(latest.committee_verdict_json) if latest.committee_verdict_json else {}
+                result[s.ticker] = {
+                    "rating": latest.rating,
+                    "score": committee.get("weighted_score"),
+                    "date": latest.analysis_date,
+                    "horizon": latest.horizon,
+                }
+        return result
+
 @app.get("/api/journal/stats")
 def get_journal_stats():
     """Get system backtesting and calibration statistics"""

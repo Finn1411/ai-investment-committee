@@ -3,48 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Agent Dashboard</title>
+    <title>Finance Agent — AI Investment Committee</title>
+    <meta name="description" content="AI-powered investment research and multi-agent committee analysis platform.">
     <link rel="stylesheet" href="/static/style.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+
+        <!-- ── Sidebar ─────────────────────────────────────── -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-icon"><i class="fa-solid fa-chart-line"></i></div>
                 <h2>Finance Agent</h2>
             </div>
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-view="dashboard">
-                    <i class="fa-solid fa-gauge"></i> Dashboard
+                <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+                    <i class="fa-solid fa-gauge-high"></i> Dashboard
                 </a>
-                <a href="#" class="nav-item" data-view="watchlist">
-                    <i class="fa-solid fa-list"></i> Watchlist
+                <a href="#" class="nav-item" data-view="watchlist" id="nav-watchlist">
+                    <i class="fa-solid fa-list-check"></i> Watchlist
                 </a>
-                <a href="#" class="nav-item" data-view="journal">
-                    <i class="fa-solid fa-book"></i> Journal
+                <a href="#" class="nav-item" data-view="journal" id="nav-journal">
+                    <i class="fa-solid fa-book-open"></i> Journal
                 </a>
             </nav>
+            <div class="sidebar-footer">
+                AI Investment Committee v1.0
+            </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- ── Main Content ──────────────────────────────────── -->
         <main class="main-content">
-            <!-- Dashboard View -->
+
+            <!-- DASHBOARD VIEW -->
             <section id="dashboard-view" class="view-section active">
                 <header class="section-header">
                     <h1>System Overview</h1>
-                    <p>AI calibration and portfolio performance</p>
+                    <p>AI calibration performance and recent analyses</p>
                 </header>
-                
+
                 <div class="stats-grid">
                     <div class="stat-card glass">
                         <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
                         <div class="stat-info">
-                            <h3>Overall Hit Rate</h3>
+                            <h3>Hit Rate</h3>
                             <h2 id="stat-hit-rate">--%</h2>
                         </div>
                     </div>
@@ -58,7 +64,7 @@
                     <div class="stat-card glass">
                         <div class="stat-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
                         <div class="stat-info">
-                            <h3>Total Predictions</h3>
+                            <h3>Total Analyses</h3>
                             <h2 id="stat-total">--</h2>
                         </div>
                     </div>
@@ -71,64 +77,80 @@
                     </div>
                 </div>
 
-                <div class="dashboard-content">
-                    <div class="recent-predictions glass">
+                <div class="glass recent-predictions">
+                    <div class="table-header">
                         <h3>Recent Analyses</h3>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Ticker</th>
-                                    <th>Date</th>
-                                    <th>Rating</th>
-                                    <th>Confidence</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-predictions-body">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
                     </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Date</th>
+                                <th>Rating</th>
+                                <th>Score</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-predictions-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
-            <!-- Watchlist View -->
+            <!-- WATCHLIST VIEW -->
             <section id="watchlist-view" class="view-section">
                 <header class="section-header flex-between">
                     <div>
                         <h1>Watchlist</h1>
-                        <p>Tracked stocks for analysis</p>
+                        <p>Tracked stocks for AI committee analysis</p>
                     </div>
-                    <div class="add-stock-container">
-                        <select id="global-horizon" class="glass-select">
+                    <div class="watchlist-toolbar">
+                        <select id="global-horizon" class="glass-select" title="Default analysis horizon">
                             <option value="3M">3 Months</option>
                             <option value="12M" selected>12 Months</option>
-                            <option value="3-5Y">3-5 Years</option>
+                            <option value="3-5Y">3–5 Years</option>
                         </select>
-                        <input type="text" id="new-ticker-input" placeholder="Enter Ticker (e.g. MSFT)">
-                        <button id="add-ticker-btn" class="btn primary-btn"><i class="fa-solid fa-plus"></i> Add</button>
+                        <input type="text" id="new-ticker-input" placeholder="Ticker (e.g. MSFT)" style="width:180px;">
+                        <button id="add-ticker-btn" class="btn primary-btn">
+                            <i class="fa-solid fa-plus"></i> Add Stock
+                        </button>
                     </div>
                 </header>
+
+                <!-- Macro Regime Banner -->
+                <div id="macro-banner" class="macro-banner neutral hidden">
+                    <span class="macro-dot"></span>
+                    <span>Market Regime: <span class="macro-label" id="macro-label">Loading...</span></span>
+                    <span style="color:var(--border-active)">|</span>
+                    <span id="macro-detail" style="font-size:12px;"></span>
+                </div>
 
                 <div class="watchlist-grid" id="watchlist-grid">
                     <!-- Populated by JS -->
                 </div>
             </section>
 
-            <!-- Journal View -->
+            <!-- JOURNAL VIEW -->
             <section id="journal-view" class="view-section">
                 <header class="section-header">
                     <h1>Prediction Journal</h1>
-                    <p>Historical forecasting accuracy</p>
+                    <p>Immutable log of every AI committee verdict</p>
                 </header>
-                <div class="glass padding-lg">
+                <div class="glass">
+                    <div class="journal-search-bar">
+                        <input type="text" id="journal-search" placeholder="Search by ticker..." style="width:260px;">
+                    </div>
                     <table class="data-table full-width">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>#</th>
                                 <th>Ticker</th>
-                                <th>Analysis Date</th>
+                                <th>Date</th>
+                                <th>Horizon</th>
                                 <th>Rating</th>
+                                <th>Score</th>
                                 <th>Actual Return</th>
                                 <th>Status</th>
                             </tr>
@@ -139,83 +161,133 @@
                     </table>
                 </div>
             </section>
+
         </main>
     </div>
 
-    <!-- Analysis Modal -->
-    <div id="analysis-modal" class="modal-overlay hidden">
-        <div class="modal-container glass">
-            <div class="modal-header">
-                <h2 id="modal-title">Analyzing...</h2>
-                <button id="close-modal" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
+    <!-- ── Analysis Drawer ────────────────────────────────── -->
+    <div id="drawer-overlay" class="drawer-overlay hidden">
+        <div class="drawer">
+            <div class="drawer-header">
+                <h2 id="drawer-title">Analyzing...</h2>
+                <button id="close-drawer" class="close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-content">
+
+            <div class="drawer-body">
                 <!-- Loading State -->
                 <div id="analysis-loading" class="loading-state">
                     <div class="spinner"></div>
-                    <h3 class="pulsate">AI Committee is researching...</h3>
-                    <p>Fetching market data, fundamentals, and running multi-agent consensus.</p>
-                    <p class="timer-text">This usually takes 20-40 seconds.</p>
+                    <h3>AI Committee is researching...</h3>
+                    <p>Fetching market data, running agents, forming consensus.</p>
+                    <p style="color:var(--text-muted);font-size:13px;">This usually takes 20–40 seconds.</p>
                 </div>
-                
+
                 <!-- Report State -->
-                <div id="analysis-report" class="report-state hidden">
-                    <div class="report-header">
-                        <div class="report-score-box">
-                            <span class="score-label">Committee Score</span>
-                            <span class="score-value" id="rep-score">--/10</span>
+                <div id="analysis-report" class="hidden">
+
+                    <!-- Hero: Score + Ticker + Badges -->
+                    <div class="report-hero">
+                        <div class="report-score-ring">
+                            <span class="score-num" id="rep-score">--</span>
+                            <span class="score-denom">/10</span>
                         </div>
-                        <div class="report-main-info">
+                        <div class="report-meta">
                             <h1 id="rep-ticker">TICKER</h1>
                             <div class="badges">
                                 <span class="badge" id="rep-rating">RATING</span>
                                 <span class="badge gray">Horizon: <span id="rep-horizon">12M</span></span>
+                                <span class="badge gray" id="rep-date-badge"></span>
                             </div>
+                            <div class="report-runtime" id="rep-runtime"></div>
                         </div>
                     </div>
 
-                    <div class="report-thesis">
-                        <h3>Investment Thesis</h3>
-                        <p id="rep-thesis">...</p>
-                    </div>
+                    <div class="report-body">
 
-                    <div class="report-grid">
-                        <div class="report-card">
-                            <h3>Scenario Model</h3>
-                            <ul class="scenario-list">
-                                <li><strong>Bull:</strong> <span id="rep-bull-prob"></span>% (<span id="rep-bull-ret"></span> return)</li>
-                                <li><strong>Base:</strong> <span id="rep-base-prob"></span>% (<span id="rep-base-ret"></span> return)</li>
-                                <li><strong>Bear:</strong> <span id="rep-bear-prob"></span>% (<span id="rep-bear-ret"></span> return)</li>
-                            </ul>
-                            <div class="ev-box">
-                                Expected Value: <strong id="rep-ev"></strong>
-                            </div>
-                        </div>
-                        <div class="report-card">
-                            <h3>Key Risks</h3>
-                            <ul id="rep-risks" class="bullet-list"></ul>
-                        </div>
-                    </div>
-
-                    <div class="agent-breakdown">
-                        <h3>Agent Consensus Breakdown</h3>
+                        <!-- Disagreement Warning -->
                         <div class="disagreement-warning hidden" id="rep-disagreement">
-                            <i class="fa-solid fa-triangle-exclamation"></i> High Disagreement Detected
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>High Committee Disagreement — treat this verdict with extra caution</span>
                         </div>
-                        <div class="agent-list" id="rep-agents">
-                            <!-- Populated by JS -->
+
+                        <!-- Investment Thesis -->
+                        <div>
+                            <div class="report-section-title">Investment Thesis</div>
+                            <div class="thesis-block" id="rep-thesis">...</div>
                         </div>
-                    </div>
-                    
-                    <div class="report-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+
+                        <!-- Bull / Bear Case -->
+                        <div id="bull-bear-section">
+                            <div class="report-section-title">Bull vs. Bear Case</div>
+                            <div class="bull-bear-grid">
+                                <div class="bull-card" id="rep-bull-case">
+                                    <strong>Bull Case</strong><br>
+                                    <span id="rep-bull-text"></span>
+                                </div>
+                                <div class="bear-card" id="rep-bear-case">
+                                    <strong>Bear Case</strong><br>
+                                    <span id="rep-bear-text"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scenario Model -->
+                        <div>
+                            <div class="report-section-title">Scenario Model</div>
+                            <div class="scenario-bar-wrap">
+                                <div class="scenario-row">
+                                    <span class="scenario-label bull">Bull</span>
+                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill bull" id="bar-bull" style="width:0%"></div></div>
+                                    <span class="scenario-ret" id="ret-bull">--</span>
+                                </div>
+                                <div class="scenario-row">
+                                    <span class="scenario-label base">Base</span>
+                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill base" id="bar-base" style="width:0%"></div></div>
+                                    <span class="scenario-ret" id="ret-base">--</span>
+                                </div>
+                                <div class="scenario-row">
+                                    <span class="scenario-label bear">Bear</span>
+                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill bear" id="bar-bear" style="width:0%"></div></div>
+                                    <span class="scenario-ret" id="ret-bear">--</span>
+                                </div>
+                                <div class="ev-row">
+                                    <span style="color:var(--text-muted);font-size:13px;">Expected Value</span>
+                                    <span class="ev-val" id="rep-ev">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Invalidation Criteria -->
+                        <div>
+                            <div class="report-section-title">Invalidation Criteria (Exit Triggers)</div>
+                            <ul class="risk-list" id="rep-risks"></ul>
+                        </div>
+
+                        <!-- Agent Breakdown -->
+                        <div>
+                            <div class="report-section-title">Agent Consensus Breakdown</div>
+                            <div class="agent-grid" id="rep-agents"></div>
+                        </div>
+
+                        <!-- Peer Context (shown if available) -->
+                        <div id="peer-section" class="hidden">
+                            <div class="report-section-title">Peer / Sector Comparison</div>
+                            <div class="peer-grid" id="rep-peers"></div>
+                        </div>
+
+                    </div><!-- /report-body -->
+
+                    <!-- Actions -->
+                    <div class="report-actions">
                         <button class="btn btn-analyze" id="btn-view-journal">
-                            <i class="fa-solid fa-book"></i> View Full Journal
+                            <i class="fa-solid fa-book-open"></i> View Full Journal
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
+                </div><!-- /analysis-report -->
+            </div><!-- /drawer-body -->
+        </div><!-- /drawer -->
+    </div><!-- /drawer-overlay -->
 
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
