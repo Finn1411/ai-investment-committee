@@ -30,6 +30,9 @@
                 <a href="#" class="nav-item" data-view="journal" id="nav-journal">
                     <i class="fa-solid fa-book-open"></i> Journal
                 </a>
+                <a href="#" class="nav-item" data-view="screener" id="nav-screener">
+                    <i class="fa-solid fa-radar"></i> Screener
+                </a>
             </nav>
             <div class="sidebar-footer">
                 AI Investment Committee v1.0
@@ -159,6 +162,94 @@
                             <!-- Populated by JS -->
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <!-- SCREENER VIEW -->
+            <section id="screener-view" class="view-section">
+                <header class="section-header flex-between">
+                    <div>
+                        <h1>Market Screener</h1>
+                        <p>Scan an index and discover top-ranked stocks by quantitative potential</p>
+                    </div>
+                </header>
+
+                <!-- Controls -->
+                <div class="screener-controls glass">
+                    <div class="screener-controls-inner">
+                        <div class="screener-control-group">
+                            <label class="control-label">Index</label>
+                            <select id="screener-index" class="glass-select">
+                                <!-- Populated by JS from API -->
+                            </select>
+                        </div>
+                        <div class="screener-control-group">
+                            <label class="control-label">Horizon</label>
+                            <select id="screener-horizon" class="glass-select">
+                                <option value="3M">3 Months</option>
+                                <option value="12M" selected>12 Months</option>
+                                <option value="3-5Y">3–5 Years</option>
+                            </select>
+                        </div>
+                        <div class="screener-control-group">
+                            <label class="control-label">Top Results</label>
+                            <select id="screener-topn" class="glass-select">
+                                <option value="10">Top 10</option>
+                                <option value="20" selected>Top 20</option>
+                                <option value="30">Top 30</option>
+                            </select>
+                        </div>
+                        <button id="screener-run-btn" class="btn primary-btn screener-btn">
+                            <i class="fa-solid fa-radar"></i> Scan Index
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div id="screener-progress-wrap" class="screener-progress-wrap hidden">
+                    <div class="screener-progress-bar">
+                        <div class="screener-progress-fill" id="screener-progress-fill"></div>
+                    </div>
+                    <div class="screener-progress-meta">
+                        <span id="screener-progress-text">Scanning...</span>
+                        <span id="screener-progress-count" class="screener-progress-count">0 / 0</span>
+                    </div>
+                </div>
+
+                <!-- Results table -->
+                <div id="screener-results-wrap" class="hidden">
+                    <div class="screener-results-header">
+                        <h3 id="screener-results-title">Top Stocks by Potential</h3>
+                        <span id="screener-results-meta" class="screener-results-meta"></span>
+                    </div>
+                    <div class="glass">
+                        <table class="data-table full-width screener-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Ticker</th>
+                                    <th>Name</th>
+                                    <th>Sector</th>
+                                    <th>Score</th>
+                                    <th>Exp. Value</th>
+                                    <th>Piotroski</th>
+                                    <th>Momentum 1Y</th>
+                                    <th>P/E (Fwd)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="screener-results-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty / idle state -->
+                <div id="screener-idle" class="empty-state">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    <h3>Ready to Scan</h3>
+                    <p>Select an index above and press <strong>Scan Index</strong> to find the highest-potential stocks.</p>
+                    <p style="font-size:12px;margin-top:8px;color:var(--border-active)">Note: scanning uses quantitative metrics only — no LLM calls. Fast first filter.</p>
                 </div>
             </section>
 

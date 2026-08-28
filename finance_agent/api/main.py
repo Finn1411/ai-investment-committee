@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 import yfinance as yf
 from datetime import datetime
@@ -16,6 +16,8 @@ from finance_agent.models.schemas import Horizon
 from finance_agent.evaluation.journal import PredictionJournal
 from finance_agent.evaluation.backtest import BacktestEngine
 from finance_agent.reporting.report import ReportFormatter
+from finance_agent.screener.engine import ScreenerEngine
+from finance_agent.screener.indices import INDEX_REGISTRY, get_index_tickers
 from finance_agent.utils.logger import setup_logger
 
 setup_logger()
@@ -208,3 +210,54 @@ app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 @app.get("/")
 def serve_frontend():
     return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+
+# ── Screener endpoints ─────────────────────────────────────────────────────────
+
+@app.get("/api/screener/indices")
+def get_screener_indices():
+    """Return available index options for the screener."""
+    return [
+        {"id": idx_id, "name": name, "size": size}
+        for idx_id, (name, _, size) in INDEX_REGISTRY.items()
+    ]
+
+
+class ScreenerRequest(BaseModel):
+    index: str = "nasdaq100"
+    top_n: int = 20
+    horizon: str = "12M"
+
+
+@app.post("/api/screener/run")
+def run_screener(req: ScreenerRequest):
+    """
+    Stream screener results as Server-Sent Events (SSE).
+    Each event is a JSON line prefixed with 'data: '.
+    """
+    horizon_map = {
+        "3M":   Horizon.THREE_MONTHS,
+        "12M":  Horizon.TWELVE_MONTHS,
+        "3-5Y": Horizon.THREE_FIVE_YEARS,
+    }
+    horizon = horizon_map.get(req.horizon, Horizon.TWELVE_MONTHS)
+
+    try:
+        tickers = get_index_tickers(req.index)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    engine = ScreenerEngine(max_workers=12)
+
+    def event_stream():
+        for event in engine.scan_stream(tickers, top_n=req.top_n, horizon=horizon):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )

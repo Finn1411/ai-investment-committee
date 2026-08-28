@@ -559,3 +559,182 @@ function renderReport(ticker, data) {
 // ── Initial Load ─────────────────────────────────────────────
 
 loadDashboard();
+
+// ── Screener ─────────────────────────────────────────────────
+
+async function loadScreenerIndices() {
+    try {
+        const res = await fetch(`${API_BASE}/screener/indices`);
+        const indices = await res.json();
+        const sel = document.getElementById('screener-index');
+        sel.innerHTML = '';
+        indices.forEach(idx => {
+            const opt = document.createElement('option');
+            opt.value = idx.id;
+            opt.textContent = `${idx.name} (~${idx.size} stocks)`;
+            // Default to NASDAQ 100 for speed
+            if (idx.id === 'nasdaq100') opt.selected = true;
+            sel.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load indices:', e);
+    }
+}
+
+loadScreenerIndices();
+
+document.getElementById('screener-run-btn').addEventListener('click', runScreener);
+
+async function runScreener() {
+    const index   = document.getElementById('screener-index').value;
+    const horizon = document.getElementById('screener-horizon').value;
+    const topN    = parseInt(document.getElementById('screener-topn').value);
+
+    const btn = document.getElementById('screener-run-btn');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Scanning...`;
+
+    // Reset UI
+    document.getElementById('screener-idle').classList.add('hidden');
+    document.getElementById('screener-results-wrap').classList.add('hidden');
+    document.getElementById('screener-progress-wrap').classList.remove('hidden');
+    document.getElementById('screener-progress-fill').style.width = '0%';
+    document.getElementById('screener-progress-text').textContent = 'Fetching index...';
+    document.getElementById('screener-progress-count').textContent = '0 / ?';
+    document.getElementById('screener-results-body').innerHTML = '';
+
+    try {
+        const response = await fetch(`${API_BASE}/screener/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ index, horizon, top_n: topN })
+        });
+
+        if (!response.ok) throw new Error('Screener request failed');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete line
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                try {
+                    const event = JSON.parse(line.slice(6));
+                    handleScreenerEvent(event, topN);
+                } catch (_) {}
+            }
+        }
+    } catch (e) {
+        showToast(`Screener failed: ${e.message}`, 'error');
+        document.getElementById('screener-idle').classList.remove('hidden');
+        document.getElementById('screener-progress-wrap').classList.add('hidden');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<i class="fa-solid fa-radar"></i> Scan Index`;
+}
+
+function handleScreenerEvent(event, topN) {
+    if (event.type === 'start') {
+        document.getElementById('screener-progress-count').textContent = `0 / ${event.total}`;
+    }
+
+    if (event.type === 'progress') {
+        const pct = Math.round((event.done / event.total) * 100);
+        document.getElementById('screener-progress-fill').style.width = pct + '%';
+        document.getElementById('screener-progress-text').textContent =
+            `Analyzing ${event.ticker}${event.ok ? '' : ' (skipped)'}`;
+        document.getElementById('screener-progress-count').textContent =
+            `${event.done} / ${event.total}`;
+    }
+
+    if (event.type === 'results') {
+        document.getElementById('screener-progress-wrap').classList.add('hidden');
+        document.getElementById('screener-results-wrap').classList.remove('hidden');
+
+        const selectedIndex = document.getElementById('screener-index');
+        const indexName = selectedIndex.options[selectedIndex.selectedIndex]?.text || '';
+
+        document.getElementById('screener-results-title').textContent =
+            `Top ${event.data.length} Stocks — ${indexName}`;
+        document.getElementById('screener-results-meta').textContent =
+            `Quantitative scan · ${new Date().toLocaleTimeString()}`;
+
+        renderScreenerResults(event.data);
+    }
+}
+
+function renderScreenerResults(stocks) {
+    const tbody = document.getElementById('screener-results-body');
+    tbody.innerHTML = '';
+
+    if (!stocks.length) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">No results — try a different index or horizon.</td></tr>`;
+        return;
+    }
+
+    stocks.forEach((s, i) => {
+        const sc = s.screener_score || 0;
+        const cls = sc >= 7 ? 'high' : sc >= 5 ? 'mid' : 'low';
+
+        const ev = s.expected_value;
+        let evStr = '—', evCls = '';
+        if (ev != null) {
+            const evPct = Math.abs(ev) <= 1 ? ev * 100 : ev;
+            evStr = (evPct >= 0 ? '+' : '') + evPct.toFixed(1) + '%';
+            evCls = evPct >= 0 ? 'pos-ret' : 'neg-ret';
+        }
+
+        const pf = s.piotroski;
+        let pfHtml = '—';
+        if (pf != null) {
+            const pfCls = pf >= 7 ? 'high' : pf >= 4 ? 'mid' : 'low';
+            pfHtml = `<span class="piotroski-badge ${pfCls}">${pf}</span>`;
+        }
+
+        const mom = s.momentum_1y;
+        let momStr = '—', momCls = '';
+        if (mom != null) {
+            const momPct = Math.abs(mom) <= 1 ? mom * 100 : mom;
+            momStr = (momPct >= 0 ? '+' : '') + momPct.toFixed(1) + '%';
+            momCls = momPct >= 0 ? 'pos-ret' : 'neg-ret';
+        }
+
+        const fpe = s.forward_pe;
+        const fpeStr = fpe != null ? fpe.toFixed(1) + 'x' : '—';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="screener-rank">${i + 1}</td>
+            <td><strong style="font-family:var(--font-mono);font-size:14px">${s.ticker}</strong></td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-dim)">${s.name || '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${s.sector || '—'}</td>
+            <td><span class="screener-score-pill ${cls}">${sc.toFixed(1)}</span></td>
+            <td class="${evCls}" style="font-family:var(--font-mono);font-size:13px">${evStr}</td>
+            <td>${pfHtml}</td>
+            <td class="${momCls}" style="font-family:var(--font-mono);font-size:13px">${momStr}</td>
+            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-dim)">${fpeStr}</td>
+            <td>
+                <button class="btn btn-screener-analyze" onclick="startAnalysisFromScreener('${s.ticker}')">
+                    <i class="fa-solid fa-microchip"></i> Analyze
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.startAnalysisFromScreener = (ticker) => {
+    // Switch to Watchlist view context but open the drawer directly
+    startAnalysis(ticker);
+    // Also ensure the ticker gets added to watchlist if not already there
+    fetch(`${API_BASE}/watchlist/${ticker}`, { method: 'POST' }).catch(() => {});
+};
