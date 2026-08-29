@@ -4,385 +4,472 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Agent — AI Investment Committee</title>
-    <meta name="description" content="AI-powered investment research and multi-agent committee analysis platform.">
+    <meta name="description" content="AI-powered investment research: watchlist, multi-agent committee analysis, prediction journal, and market screener.">
     <link rel="stylesheet" href="/static/style.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-    <div class="app-container">
+<div class="app-container">
 
-        <!-- ── Sidebar ─────────────────────────────────────── -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-icon"><i class="fa-solid fa-chart-line"></i></div>
+    <!-- ── Sidebar ──────────────────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <div>
                 <h2>Finance Agent</h2>
+                <p class="logo-sub">AI Committee</p>
             </div>
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
-                    <i class="fa-solid fa-gauge-high"></i> Dashboard
-                </a>
-                <a href="#" class="nav-item" data-view="watchlist" id="nav-watchlist">
-                    <i class="fa-solid fa-list-check"></i> Watchlist
-                </a>
-                <a href="#" class="nav-item" data-view="journal" id="nav-journal">
-                    <i class="fa-solid fa-book-open"></i> Journal
-                </a>
-                <a href="#" class="nav-item" data-view="screener" id="nav-screener">
-                    <i class="fa-solid fa-radar"></i> Screener
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                AI Investment Committee v1.0
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="watchlist" id="nav-watchlist">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Watchlist</span>
+            </a>
+            <a href="#" class="nav-item" data-view="analyzer" id="nav-analyzer">
+                <i class="fa-solid fa-microchip"></i>
+                <span>Analyzer</span>
+            </a>
+            <a href="#" class="nav-item" data-view="journal" id="nav-journal">
+                <i class="fa-solid fa-book-open"></i>
+                <span>Journal</span>
+            </a>
+            <a href="#" class="nav-item" data-view="screener" id="nav-screener">
+                <i class="fa-solid fa-radar"></i>
+                <span>Screener</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-stats">
+                <div class="sidebar-stat">
+                    <span class="sidebar-stat-val" id="sb-total">—</span>
+                    <span class="sidebar-stat-label">Analyses</span>
+                </div>
+                <div class="sidebar-stat">
+                    <span class="sidebar-stat-val" id="sb-watchlist">—</span>
+                    <span class="sidebar-stat-label">Watching</span>
+                </div>
+                <div class="sidebar-stat">
+                    <span class="sidebar-stat-val" id="sb-hit">—</span>
+                    <span class="sidebar-stat-label">Hit Rate</span>
+                </div>
             </div>
-        </aside>
+            <p class="sidebar-version">v1.0.0</p>
+        </div>
+    </aside>
 
-        <!-- ── Main Content ──────────────────────────────────── -->
-        <main class="main-content">
+    <!-- ── Main ────────────────────────────────────────────── -->
+    <main class="main-content">
 
-            <!-- DASHBOARD VIEW -->
-            <section id="dashboard-view" class="view-section active">
-                <header class="section-header">
-                    <h1>System Overview</h1>
-                    <p>AI calibration performance and recent analyses</p>
-                </header>
+        <!-- ════════════════════════════════════════════════
+             VIEW 1: WATCHLIST
+             ════════════════════════════════════════════════ -->
+        <section id="watchlist-view" class="view-section active">
 
-                <div class="stats-grid">
-                    <div class="stat-card glass">
-                        <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
-                        <div class="stat-info">
-                            <h3>Hit Rate</h3>
-                            <h2 id="stat-hit-rate">--%</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card glass">
-                        <div class="stat-icon"><i class="fa-solid fa-scale-balanced"></i></div>
-                        <div class="stat-info">
-                            <h3>Brier Score</h3>
-                            <h2 id="stat-brier">--</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card glass">
-                        <div class="stat-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
-                        <div class="stat-info">
-                            <h3>Total Analyses</h3>
-                            <h2 id="stat-total">--</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card glass">
-                        <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-                        <div class="stat-info">
-                            <h3>Pending Reviews</h3>
-                            <h2 id="stat-pending">--</h2>
-                        </div>
-                    </div>
+            <header class="section-header flex-between">
+                <div>
+                    <h1>Watchlist</h1>
+                    <p>Your tracked stocks with live prices and AI scores</p>
                 </div>
-
-                <div class="glass recent-predictions">
-                    <div class="table-header">
-                        <h3>Recent Analyses</h3>
+                <div class="watchlist-toolbar">
+                    <div class="ticker-input-wrap">
+                        <i class="fa-solid fa-plus ticker-input-icon"></i>
+                        <input type="text" id="new-ticker-input" placeholder="Add ticker, e.g. MSFT" maxlength="8" autocomplete="off" spellcheck="false">
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Ticker</th>
-                                <th>Date</th>
-                                <th>Rating</th>
-                                <th>Score</th>
-                                <th>Confidence</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recent-predictions-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
+                    <button id="add-ticker-btn" class="btn primary-btn">
+                        Add to Watchlist
+                    </button>
+                    <button id="refresh-prices-btn" class="btn ghost-btn" title="Refresh live prices">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
                 </div>
-            </section>
+            </header>
 
-            <!-- WATCHLIST VIEW -->
-            <section id="watchlist-view" class="view-section">
-                <header class="section-header flex-between">
-                    <div>
-                        <h1>Watchlist</h1>
-                        <p>Tracked stocks for AI committee analysis</p>
-                    </div>
-                    <div class="watchlist-toolbar">
-                        <select id="global-horizon" class="glass-select" title="Default analysis horizon">
-                            <option value="3M">3 Months</option>
-                            <option value="12M" selected>12 Months</option>
-                            <option value="3-5Y">3–5 Years</option>
-                        </select>
-                        <input type="text" id="new-ticker-input" placeholder="Ticker (e.g. MSFT)" style="width:180px;">
-                        <button id="add-ticker-btn" class="btn primary-btn">
-                            <i class="fa-solid fa-plus"></i> Add Stock
-                        </button>
-                    </div>
-                </header>
-
-                <!-- Macro Regime Banner -->
-                <div id="macro-banner" class="macro-banner neutral hidden">
-                    <span class="macro-dot"></span>
-                    <span>Market Regime: <span class="macro-label" id="macro-label">Loading...</span></span>
-                    <span style="color:var(--border-active)">|</span>
-                    <span id="macro-detail" style="font-size:12px;"></span>
+            <!-- Watchlist table -->
+            <div id="watchlist-table-wrap" class="glass">
+                <div id="watchlist-empty" class="empty-state hidden">
+                    <i class="fa-solid fa-chart-bar"></i>
+                    <h3>Your watchlist is empty</h3>
+                    <p>Add a stock ticker above, or import one from the Screener.</p>
                 </div>
+                <table class="data-table full-width watchlist-table" id="watchlist-table">
+                    <thead>
+                        <tr>
+                            <th>Ticker</th>
+                            <th>Name</th>
+                            <th>Sector</th>
+                            <th class="col-price">Price</th>
+                            <th class="col-price">Change</th>
+                            <th>Last Rating</th>
+                            <th class="col-score">Score</th>
+                            <th class="col-date">Last Analysis</th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlist-tbody">
+                        <tr id="watchlist-loading-row">
+                            <td colspan="9" class="loading-cell">
+                                <span class="spinner-sm"></span> Loading watchlist...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <div class="watchlist-grid" id="watchlist-grid">
-                    <!-- Populated by JS -->
-                </div>
-            </section>
+        </section>
 
-            <!-- JOURNAL VIEW -->
-            <section id="journal-view" class="view-section">
-                <header class="section-header">
-                    <h1>Prediction Journal</h1>
-                    <p>Immutable log of every AI committee verdict</p>
-                </header>
-                <div class="glass">
-                    <div class="journal-search-bar">
-                        <input type="text" id="journal-search" placeholder="Search by ticker..." style="width:260px;">
+
+        <!-- ════════════════════════════════════════════════
+             VIEW 2: ANALYZER
+             ════════════════════════════════════════════════ -->
+        <section id="analyzer-view" class="view-section">
+
+            <header class="section-header">
+                <h1>Stock Analyzer</h1>
+                <p>Run a full AI committee analysis on any publicly traded stock</p>
+            </header>
+
+            <div class="analyzer-search-card glass">
+                <div class="analyzer-search-inner">
+                    <div class="analyzer-ticker-group">
+                        <label class="control-label">Ticker Symbol</label>
+                        <input type="text" id="analyzer-ticker-input"
+                            placeholder="e.g. NVDA, AAPL, SAP.DE"
+                            class="analyzer-ticker-input"
+                            maxlength="12" autocomplete="off" spellcheck="false">
                     </div>
-                    <table class="data-table full-width">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Ticker</th>
-                                <th>Date</th>
-                                <th>Horizon</th>
-                                <th>Rating</th>
-                                <th>Score</th>
-                                <th>Actual Return</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="journal-table-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- SCREENER VIEW -->
-            <section id="screener-view" class="view-section">
-                <header class="section-header flex-between">
-                    <div>
-                        <h1>Market Screener</h1>
-                        <p>Scan an index and discover top-ranked stocks by quantitative potential</p>
-                    </div>
-                </header>
-
-                <!-- Controls -->
-                <div class="screener-controls glass">
-                    <div class="screener-controls-inner">
-                        <div class="screener-control-group">
-                            <label class="control-label">Index</label>
-                            <select id="screener-index" class="glass-select">
-                                <!-- Populated by JS from API -->
-                            </select>
-                        </div>
+                    <div class="analyzer-options">
                         <div class="screener-control-group">
                             <label class="control-label">Horizon</label>
-                            <select id="screener-horizon" class="glass-select">
+                            <select id="analyzer-horizon" class="glass-select">
                                 <option value="3M">3 Months</option>
                                 <option value="12M" selected>12 Months</option>
                                 <option value="3-5Y">3–5 Years</option>
                             </select>
                         </div>
                         <div class="screener-control-group">
-                            <label class="control-label">Top Results</label>
-                            <select id="screener-topn" class="glass-select">
-                                <option value="10">Top 10</option>
-                                <option value="20" selected>Top 20</option>
-                                <option value="30">Top 30</option>
+                            <label class="control-label">Save to Journal</label>
+                            <select id="analyzer-persist" class="glass-select">
+                                <option value="true" selected>Yes</option>
+                                <option value="false">No (preview)</option>
                             </select>
                         </div>
-                        <button id="screener-run-btn" class="btn primary-btn screener-btn">
-                            <i class="fa-solid fa-radar"></i> Scan Index
-                        </button>
                     </div>
+                    <button id="analyzer-run-btn" class="btn primary-btn analyzer-run-btn">
+                        <i class="fa-solid fa-microchip"></i>
+                        Run AI Analysis
+                    </button>
                 </div>
-
-                <!-- Progress -->
-                <div id="screener-progress-wrap" class="screener-progress-wrap hidden">
-                    <div class="screener-progress-bar">
-                        <div class="screener-progress-fill" id="screener-progress-fill"></div>
-                    </div>
-                    <div class="screener-progress-meta">
-                        <span id="screener-progress-text">Scanning...</span>
-                        <span id="screener-progress-count" class="screener-progress-count">0 / 0</span>
-                    </div>
-                </div>
-
-                <!-- Results table -->
-                <div id="screener-results-wrap" class="hidden">
-                    <div class="screener-results-header">
-                        <h3 id="screener-results-title">Top Stocks by Potential</h3>
-                        <span id="screener-results-meta" class="screener-results-meta"></span>
-                    </div>
-                    <div class="glass">
-                        <table class="data-table full-width screener-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Ticker</th>
-                                    <th>Name</th>
-                                    <th>Sector</th>
-                                    <th>Score</th>
-                                    <th>Exp. Value</th>
-                                    <th>Piotroski</th>
-                                    <th>Momentum 1Y</th>
-                                    <th>P/E (Fwd)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="screener-results-body">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Empty / idle state -->
-                <div id="screener-idle" class="empty-state">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i>
-                    <h3>Ready to Scan</h3>
-                    <p>Select an index above and press <strong>Scan Index</strong> to find the highest-potential stocks.</p>
-                    <p style="font-size:12px;margin-top:8px;color:var(--border-active)">Note: scanning uses quantitative metrics only — no LLM calls. Fast first filter.</p>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- ── Analysis Drawer ────────────────────────────────── -->
-    <div id="drawer-overlay" class="drawer-overlay hidden">
-        <div class="drawer">
-            <div class="drawer-header">
-                <h2 id="drawer-title">Analyzing...</h2>
-                <button id="close-drawer" class="close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <div class="drawer-body">
-                <!-- Loading State -->
-                <div id="analysis-loading" class="loading-state">
-                    <div class="spinner"></div>
-                    <h3>AI Committee is researching...</h3>
-                    <p>Fetching market data, running agents, forming consensus.</p>
-                    <p style="color:var(--text-muted);font-size:13px;">This usually takes 20–40 seconds.</p>
+            <!-- Recent tickers quick-access -->
+            <div id="analyzer-recents-wrap" class="analyzer-recents-wrap hidden">
+                <span class="control-label">Recent:</span>
+                <div id="analyzer-recents" class="recents-chips"></div>
+            </div>
+
+            <!-- Analyzer info cards -->
+            <div class="analyzer-info-grid">
+                <div class="analyzer-info-card glass">
+                    <i class="fa-solid fa-users ai-icon"></i>
+                    <h4>7 Specialized Agents</h4>
+                    <p>Fundamental, Technical, Macro, Sentiment, Risk, Valuation, and Catalyst agents work in parallel.</p>
+                </div>
+                <div class="analyzer-info-card glass">
+                    <i class="fa-solid fa-scale-balanced ai-icon"></i>
+                    <h4>Committee Consensus</h4>
+                    <p>Agents debate, weigh evidence, and reach a quantified consensus verdict with a disagreement score.</p>
+                </div>
+                <div class="analyzer-info-card glass">
+                    <i class="fa-solid fa-chart-area ai-icon"></i>
+                    <h4>Scenario Model</h4>
+                    <p>Bull / Base / Bear probability distributions with expected value and invalidation criteria.</p>
+                </div>
+                <div class="analyzer-info-card glass">
+                    <i class="fa-solid fa-database ai-icon"></i>
+                    <h4>Persistent Journal</h4>
+                    <p>Every verdict is stored immutably for long-term calibration and backtesting of predictions.</p>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ════════════════════════════════════════════════
+             VIEW 3: JOURNAL
+             ════════════════════════════════════════════════ -->
+        <section id="journal-view" class="view-section">
+
+            <header class="section-header flex-between">
+                <div>
+                    <h1>Prediction Journal</h1>
+                    <p>Immutable log of every AI committee verdict</p>
+                </div>
+                <div class="journal-filters">
+                    <input type="text" id="journal-search" placeholder="Search ticker..." style="width:180px;">
+                    <select id="journal-rating-filter" class="glass-select">
+                        <option value="">All Ratings</option>
+                        <option value="BUY">BUY</option>
+                        <option value="HOLD">HOLD</option>
+                        <option value="AVOID">AVOID</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Stats bar -->
+            <div class="journal-stats-bar glass">
+                <div class="journal-stat">
+                    <span class="journal-stat-val" id="j-total">—</span>
+                    <span class="journal-stat-lbl">Total Analyses</span>
+                </div>
+                <div class="journal-stat-divider"></div>
+                <div class="journal-stat">
+                    <span class="journal-stat-val" id="j-hit">—</span>
+                    <span class="journal-stat-lbl">Hit Rate</span>
+                </div>
+                <div class="journal-stat-divider"></div>
+                <div class="journal-stat">
+                    <span class="journal-stat-val" id="j-brier">—</span>
+                    <span class="journal-stat-lbl">Brier Score</span>
+                </div>
+                <div class="journal-stat-divider"></div>
+                <div class="journal-stat">
+                    <span class="journal-stat-val" id="j-pending">—</span>
+                    <span class="journal-stat-lbl">Pending Reviews</span>
+                </div>
+            </div>
+
+            <div class="glass">
+                <table class="data-table full-width">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ticker</th>
+                            <th>Date</th>
+                            <th>Horizon</th>
+                            <th>Rating</th>
+                            <th>Score</th>
+                            <th>Actual Return</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="journal-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+
+        <!-- ════════════════════════════════════════════════
+             VIEW 4: SCREENER
+             ════════════════════════════════════════════════ -->
+        <section id="screener-view" class="view-section">
+
+            <header class="section-header flex-between">
+                <div>
+                    <h1>Market Screener</h1>
+                    <p>Scan an index and discover top-ranked stocks by quantitative potential</p>
+                </div>
+            </header>
+
+            <div class="screener-controls glass">
+                <div class="screener-controls-inner">
+                    <div class="screener-control-group">
+                        <label class="control-label">Index</label>
+                        <select id="screener-index" class="glass-select"></select>
+                    </div>
+                    <div class="screener-control-group">
+                        <label class="control-label">Horizon</label>
+                        <select id="screener-horizon" class="glass-select">
+                            <option value="3M">3 Months</option>
+                            <option value="12M" selected>12 Months</option>
+                            <option value="3-5Y">3–5 Years</option>
+                        </select>
+                    </div>
+                    <div class="screener-control-group">
+                        <label class="control-label">Top Results</label>
+                        <select id="screener-topn" class="glass-select">
+                            <option value="10">Top 10</option>
+                            <option value="20" selected>Top 20</option>
+                            <option value="30">Top 30</option>
+                        </select>
+                    </div>
+                    <button id="screener-run-btn" class="btn primary-btn screener-btn">
+                        <i class="fa-solid fa-radar"></i> Scan Index
+                    </button>
+                </div>
+            </div>
+
+            <div id="screener-progress-wrap" class="screener-progress-wrap hidden">
+                <div class="screener-progress-bar">
+                    <div class="screener-progress-fill" id="screener-progress-fill"></div>
+                </div>
+                <div class="screener-progress-meta">
+                    <span id="screener-progress-text">Scanning...</span>
+                    <span id="screener-progress-count" class="screener-progress-count">0 / 0</span>
+                </div>
+            </div>
+
+            <div id="screener-results-wrap" class="hidden">
+                <div class="screener-results-header">
+                    <h3 id="screener-results-title">Top Stocks by Potential</h3>
+                    <span id="screener-results-meta" class="screener-results-meta"></span>
+                </div>
+                <div class="glass">
+                    <table class="data-table full-width screener-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ticker</th>
+                                <th>Name</th>
+                                <th>Sector</th>
+                                <th>Score</th>
+                                <th>Exp. Value</th>
+                                <th>Piotroski</th>
+                                <th>Momentum 1Y</th>
+                                <th>Fwd P/E</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="screener-results-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="screener-idle" class="empty-state">
+                <i class="fa-solid fa-magnifying-glass-chart"></i>
+                <h3>Ready to Scan</h3>
+                <p>Select an index and press <strong>Scan Index</strong> to discover high-potential stocks.</p>
+                <p style="font-size:12px;margin-top:8px;color:var(--border-active)">Pure quantitative scoring — no LLM calls. Fast first filter, then run Analyze on top picks.</p>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- ── Analysis Drawer ──────────────────────────────────────── -->
+<div id="drawer-overlay" class="drawer-overlay hidden">
+    <div class="drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <h2 id="drawer-title">Analyzing...</h2>
+                <span class="drawer-subtitle" id="drawer-subtitle"></span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button id="drawer-add-watchlist" class="btn ghost-btn" style="font-size:12px;padding:6px 12px" title="Add to watchlist">
+                    <i class="fa-solid fa-plus"></i> Watchlist
+                </button>
+                <button id="close-drawer" class="close-btn" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <div class="drawer-body">
+            <!-- Loading -->
+            <div id="analysis-loading" class="loading-state">
+                <div class="spinner"></div>
+                <h3>AI Committee is researching...</h3>
+                <p>Fetching market data, running agents, forming consensus.</p>
+                <p style="color:var(--text-muted);font-size:13px">This usually takes 20–40 seconds.</p>
+            </div>
+
+            <!-- Report -->
+            <div id="analysis-report" class="hidden">
+
+                <div class="report-hero">
+                    <div class="report-score-ring">
+                        <span class="score-num" id="rep-score">--</span>
+                        <span class="score-denom">/10</span>
+                    </div>
+                    <div class="report-meta">
+                        <h1 id="rep-ticker">TICKER</h1>
+                        <div class="badges">
+                            <span class="badge" id="rep-rating">RATING</span>
+                            <span class="badge gray">Horizon: <span id="rep-horizon">12M</span></span>
+                            <span class="badge gray" id="rep-date-badge"></span>
+                        </div>
+                        <div class="report-runtime" id="rep-runtime"></div>
+                    </div>
                 </div>
 
-                <!-- Report State -->
-                <div id="analysis-report" class="hidden">
+                <div class="report-body">
 
-                    <!-- Hero: Score + Ticker + Badges -->
-                    <div class="report-hero">
-                        <div class="report-score-ring">
-                            <span class="score-num" id="rep-score">--</span>
-                            <span class="score-denom">/10</span>
-                        </div>
-                        <div class="report-meta">
-                            <h1 id="rep-ticker">TICKER</h1>
-                            <div class="badges">
-                                <span class="badge" id="rep-rating">RATING</span>
-                                <span class="badge gray">Horizon: <span id="rep-horizon">12M</span></span>
-                                <span class="badge gray" id="rep-date-badge"></span>
+                    <div class="disagreement-warning hidden" id="rep-disagreement">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>High Committee Disagreement — treat this verdict with extra caution</span>
+                    </div>
+
+                    <div>
+                        <div class="report-section-title">Investment Thesis</div>
+                        <div class="thesis-block" id="rep-thesis">...</div>
+                    </div>
+
+                    <div id="bull-bear-section">
+                        <div class="report-section-title">Bull vs. Bear Case</div>
+                        <div class="bull-bear-grid">
+                            <div class="bull-card">
+                                <strong>Bull Case</strong><br>
+                                <span id="rep-bull-text"></span>
                             </div>
-                            <div class="report-runtime" id="rep-runtime"></div>
+                            <div class="bear-card">
+                                <strong>Bear Case</strong><br>
+                                <span id="rep-bear-text"></span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="report-body">
-
-                        <!-- Disagreement Warning -->
-                        <div class="disagreement-warning hidden" id="rep-disagreement">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>High Committee Disagreement — treat this verdict with extra caution</span>
-                        </div>
-
-                        <!-- Investment Thesis -->
-                        <div>
-                            <div class="report-section-title">Investment Thesis</div>
-                            <div class="thesis-block" id="rep-thesis">...</div>
-                        </div>
-
-                        <!-- Bull / Bear Case -->
-                        <div id="bull-bear-section">
-                            <div class="report-section-title">Bull vs. Bear Case</div>
-                            <div class="bull-bear-grid">
-                                <div class="bull-card" id="rep-bull-case">
-                                    <strong>Bull Case</strong><br>
-                                    <span id="rep-bull-text"></span>
-                                </div>
-                                <div class="bear-card" id="rep-bear-case">
-                                    <strong>Bear Case</strong><br>
-                                    <span id="rep-bear-text"></span>
-                                </div>
+                    <div>
+                        <div class="report-section-title">Scenario Model</div>
+                        <div class="scenario-bar-wrap">
+                            <div class="scenario-row">
+                                <span class="scenario-label bull">Bull</span>
+                                <div class="scenario-bar-bg"><div class="scenario-bar-fill bull" id="bar-bull" style="width:0%"></div></div>
+                                <span class="scenario-ret" id="ret-bull">--</span>
+                            </div>
+                            <div class="scenario-row">
+                                <span class="scenario-label base">Base</span>
+                                <div class="scenario-bar-bg"><div class="scenario-bar-fill base" id="bar-base" style="width:0%"></div></div>
+                                <span class="scenario-ret" id="ret-base">--</span>
+                            </div>
+                            <div class="scenario-row">
+                                <span class="scenario-label bear">Bear</span>
+                                <div class="scenario-bar-bg"><div class="scenario-bar-fill bear" id="bar-bear" style="width:0%"></div></div>
+                                <span class="scenario-ret" id="ret-bear">--</span>
+                            </div>
+                            <div class="ev-row">
+                                <span style="color:var(--text-muted);font-size:13px">Expected Value</span>
+                                <span class="ev-val" id="rep-ev">--</span>
                             </div>
                         </div>
-
-                        <!-- Scenario Model -->
-                        <div>
-                            <div class="report-section-title">Scenario Model</div>
-                            <div class="scenario-bar-wrap">
-                                <div class="scenario-row">
-                                    <span class="scenario-label bull">Bull</span>
-                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill bull" id="bar-bull" style="width:0%"></div></div>
-                                    <span class="scenario-ret" id="ret-bull">--</span>
-                                </div>
-                                <div class="scenario-row">
-                                    <span class="scenario-label base">Base</span>
-                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill base" id="bar-base" style="width:0%"></div></div>
-                                    <span class="scenario-ret" id="ret-base">--</span>
-                                </div>
-                                <div class="scenario-row">
-                                    <span class="scenario-label bear">Bear</span>
-                                    <div class="scenario-bar-bg"><div class="scenario-bar-fill bear" id="bar-bear" style="width:0%"></div></div>
-                                    <span class="scenario-ret" id="ret-bear">--</span>
-                                </div>
-                                <div class="ev-row">
-                                    <span style="color:var(--text-muted);font-size:13px;">Expected Value</span>
-                                    <span class="ev-val" id="rep-ev">--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Invalidation Criteria -->
-                        <div>
-                            <div class="report-section-title">Invalidation Criteria (Exit Triggers)</div>
-                            <ul class="risk-list" id="rep-risks"></ul>
-                        </div>
-
-                        <!-- Agent Breakdown -->
-                        <div>
-                            <div class="report-section-title">Agent Consensus Breakdown</div>
-                            <div class="agent-grid" id="rep-agents"></div>
-                        </div>
-
-                        <!-- Peer Context (shown if available) -->
-                        <div id="peer-section" class="hidden">
-                            <div class="report-section-title">Peer / Sector Comparison</div>
-                            <div class="peer-grid" id="rep-peers"></div>
-                        </div>
-
-                    </div><!-- /report-body -->
-
-                    <!-- Actions -->
-                    <div class="report-actions">
-                        <button class="btn btn-analyze" id="btn-view-journal">
-                            <i class="fa-solid fa-book-open"></i> View Full Journal
-                        </button>
                     </div>
 
-                </div><!-- /analysis-report -->
-            </div><!-- /drawer-body -->
-        </div><!-- /drawer -->
-    </div><!-- /drawer-overlay -->
+                    <div>
+                        <div class="report-section-title">Invalidation Criteria</div>
+                        <ul class="risk-list" id="rep-risks"></ul>
+                    </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
+                    <div>
+                        <div class="report-section-title">Agent Consensus Breakdown</div>
+                        <div class="agent-grid" id="rep-agents"></div>
+                    </div>
 
-    <script src="/static/app.js"></script>
+                    <div id="peer-section" class="hidden">
+                        <div class="report-section-title">Peer / Sector Comparison</div>
+                        <div class="peer-grid" id="rep-peers"></div>
+                    </div>
+
+                </div><!-- /report-body -->
+
+                <div class="report-actions">
+                    <button class="btn ghost-btn" id="btn-view-journal" style="font-size:13px">
+                        <i class="fa-solid fa-book-open"></i> View in Journal
+                    </button>
+                </div>
+
+            </div><!-- /analysis-report -->
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/app.js"></script>
 </body>
 </html>

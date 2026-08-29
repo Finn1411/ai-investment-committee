@@ -42,7 +42,47 @@ def get_watchlist():
     """Get all tracked stocks"""
     with get_session() as session:
         stocks = session.query(StockORM).all()
-        return [{"ticker": s.ticker, "name": s.name, "sector": s.sector, "industry": s.industry, "added_at": s.added_at} for s in stocks]
+        return [{"ticker": s.ticker, "name": s.name, "sector": s.sector, "industry": s.industry, "added_at": str(s.added_at)} for s in stocks]
+
+@app.get("/api/watchlist/prices")
+def get_watchlist_prices():
+    """Batch-fetch live prices for all watchlisted tickers (single yfinance call)."""
+    with get_session() as session:
+        stocks = session.query(StockORM).all()
+        tickers = [s.ticker for s in stocks]
+
+    if not tickers:
+        return {}
+
+    try:
+        import yfinance as yf
+        data = yf.download(
+            tickers, period="2d", interval="1d",
+            auto_adjust=True, progress=False, threads=True
+        )
+        result = {}
+        for ticker in tickers:
+            try:
+                if len(tickers) == 1:
+                    close_col = data["Close"]
+                else:
+                    close_col = data["Close"][ticker]
+                close_col = close_col.dropna()
+                if len(close_col) >= 2:
+                    price = float(close_col.iloc[-1])
+                    prev  = float(close_col.iloc[-2])
+                    change_pct = (price - prev) / prev if prev else 0
+                elif len(close_col) == 1:
+                    price = float(close_col.iloc[-1])
+                    change_pct = 0.0
+                else:
+                    continue
+                result[ticker] = {"price": round(price, 2), "change_pct": round(change_pct, 4)}
+            except Exception:
+                continue
+        return result
+    except Exception as e:
+        return {}
 
 @app.post("/api/watchlist/{ticker}")
 def add_to_watchlist(ticker: str):
