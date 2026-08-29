@@ -200,7 +200,7 @@ def get_journal_stats():
 def get_predictions():
     """Get history of all predictions"""
     with get_session() as session:
-        preds = session.query(PredictionORM).order_by(PredictionORM.created_at.desc()).limit(100).all()
+        preds = session.query(PredictionORM).order_by(PredictionORM.created_at.desc()).limit(200).all()
         result = []
         for p in preds:
             result.append({
@@ -208,6 +208,7 @@ def get_predictions():
                 "seq": p.sequence_number,
                 "ticker": p.ticker,
                 "date": p.analysis_date,
+                "horizon": p.horizon,
                 "rating": p.rating,
                 "confidence": p.confidence,
                 "actual_return": p.actual_return,
@@ -215,6 +216,14 @@ def get_predictions():
                 "expected_return": p.expected_return
             })
         return result
+
+@app.delete("/api/journal/clear")
+def clear_journal():
+    """Delete all predictions from the journal (irreversible)."""
+    with get_session() as session:
+        count = session.query(PredictionORM).count()
+        session.query(PredictionORM).delete()
+        return {"status": "cleared", "deleted": count}
 
 @app.get("/api/journal/predictions/{id}")
 def get_prediction_detail(id: str):

@@ -347,6 +347,23 @@ function applyJournalFilters() {
 document.getElementById('journal-search').addEventListener('input', applyJournalFilters);
 document.getElementById('journal-rating-filter').addEventListener('change', applyJournalFilters);
 
+// Clear journal
+document.getElementById('journal-clear-btn').addEventListener('click', async () => {
+    if (!confirm('Delete ALL journal entries? This cannot be undone.')) return;
+    try {
+        const res = await fetch(`${API}/journal/clear`, { method: 'DELETE' });
+        const data = await res.json();
+        toast(`Cleared ${data.deleted} journal entries`);
+        _allPredictions = [];
+        renderJournal([]);
+        loadSidebarStats();
+        // Reset journal stats
+        ['j-total','j-hit','j-brier','j-pending'].forEach(id => {
+            document.getElementById(id).textContent = '—';
+        });
+    } catch (e) { toast('Failed to clear journal', 'error'); }
+});
+
 window.openJournalEntry = async (id) => {
     openDrawer('Loading...');
     try {
@@ -736,7 +753,7 @@ function renderScreenerResults(stocks) {
 }
 
 window.analyzeFromScreener = (ticker) => {
-    addToWatchlistFromScreener(ticker);
+    // Only analyze — do NOT auto-add to watchlist
     openDrawer(ticker);
     runAnalysis(ticker, document.getElementById('screener-horizon').value, true);
 };

@@ -35,7 +35,7 @@
                 <span>Journal</span>
             </a>
             <a href="#" class="nav-item" data-view="screener" id="nav-screener">
-                <i class="fa-solid fa-radar"></i>
+                <i class="fa-solid fa-magnifying-glass-chart"></i>
                 <span>Screener</span>
             </a>
         </nav>
@@ -206,13 +206,16 @@
                     <p>Immutable log of every AI committee verdict</p>
                 </div>
                 <div class="journal-filters">
-                    <input type="text" id="journal-search" placeholder="Search ticker..." style="width:180px;">
+                    <input type="text" id="journal-search" placeholder="Search ticker..." style="width:160px;">
                     <select id="journal-rating-filter" class="glass-select">
                         <option value="">All Ratings</option>
                         <option value="BUY">BUY</option>
                         <option value="HOLD">HOLD</option>
                         <option value="AVOID">AVOID</option>
                     </select>
+                    <button id="journal-clear-btn" class="btn ghost-btn" style="color:var(--danger);border-color:rgba(239,68,68,0.25);" title="Clear all journal entries">
+                        <i class="fa-solid fa-trash"></i> Clear All
+                    </button>
                 </div>
             </header>
 
