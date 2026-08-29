@@ -321,7 +321,7 @@ function renderJournal(preds) {
         const actualStr = p.actual_return != null ? fmtPct(p.actual_return) : '—';
         const actualCls = p.actual_return != null ? fmtRetClass(p.actual_return) : '';
         const score     = p.expected_return != null ? Number(p.expected_return).toFixed(2) : '—';
-        return `<tr onclick="openJournalEntry(${p.id})" title="Click to view full report">
+        return `<tr onclick="openJournalEntry('${p.id}')" title="Click to view full report">
             <td style="color:var(--text-muted);font-size:11px">#${p.seq || (i+1)}</td>
             <td><strong class="mono">${p.ticker}</strong></td>
             <td style="font-size:12px;color:var(--text-muted)">${p.date}</td>
