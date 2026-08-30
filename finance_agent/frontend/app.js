@@ -487,8 +487,9 @@ function renderReport(ticker, data) {
     // Hero
     const score = data.weighted_score;
     const scoreEl = document.getElementById('rep-score');
-    scoreEl.textContent = score != null ? Number(score).toFixed(1) : '—';
-    scoreEl.style.color = score >= 7 ? 'var(--score-hi)' : score >= 5 ? 'var(--score-mid)' : 'var(--score-lo)';
+    const hasScore = score != null && score > 0;
+    scoreEl.textContent = hasScore ? Number(score).toFixed(1) : '--';
+    scoreEl.style.color = !hasScore ? 'var(--text-muted)' : score >= 7 ? 'var(--score-hi)' : score >= 5 ? 'var(--score-mid)' : 'var(--score-lo)';
 
     document.getElementById('rep-ticker').textContent = ticker;
 

@@ -371,18 +371,19 @@ class DataPipeline:
         """Save/update stock info, latest market data row, and latest fundamentals to DB."""
         try:
             with get_session() as session:
-                # -- Stock metadata --------------------------------------------
+                # -- Stock metadata (only update if already in watchlist) -------
                 info = raw.info
                 stock = session.query(StockORM).filter_by(ticker=ticker).first()
-                if not stock:
-                    stock = StockORM(ticker=ticker)
-                    session.add(stock)
-                stock.name = info.get("longName") or info.get("shortName")
-                stock.sector = info.get("sector")
-                stock.industry = info.get("industry")
-                stock.country = info.get("country")
-                stock.currency = info.get("currency")
-                stock.exchange = info.get("exchange")
+                if stock:
+                    # Update metadata for existing watchlist entries only
+                    stock.name = info.get("longName") or info.get("shortName") or stock.name
+                    stock.sector = info.get("sector") or stock.sector
+                    stock.industry = info.get("industry") or stock.industry
+                    stock.country = info.get("country") or stock.country
+                    stock.currency = info.get("currency") or stock.currency
+                    stock.exchange = info.get("exchange") or stock.exchange
+                # NOTE: do NOT create a new StockORM here — that would silently
+                # add every analyzed stock to the watchlist.
 
                 # -- Latest price row ------------------------------------------
                 if raw.price_history is not None and not raw.price_history.empty:

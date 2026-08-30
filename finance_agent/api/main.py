@@ -241,7 +241,8 @@ def get_prediction_detail(id: str):
         return {
             "ticker": p.ticker,
             "horizon": p.horizon,
-            "weighted_score": committee.get("weighted_score", 0),
+            "analysis_date": p.analysis_date,
+            "weighted_score": committee.get("weighted_score") if committee else None,
             "rating": p.rating,
             "thesis": p.thesis or committee.get("synthesized_thesis", ""),
             "scenarios": scenarios,
