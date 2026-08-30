@@ -146,7 +146,34 @@ class MetricsEngine:
             ms.set("sharpe_ratio_1y", QuantEngine.sharpe_ratio(daily_returns.iloc[-252:]))
             ms.set("sortino_ratio_1y", QuantEngine.sortino_ratio(daily_returns.iloc[-252:]))
             ms.set("var_95_1y", QuantEngine.value_at_risk(daily_returns.iloc[-252:], 0.95))
+            ms.set("cvar_95_1y", QuantEngine.conditional_var(daily_returns.iloc[-252:], 0.95))
             ms.set("max_drawdown_1y", QuantEngine.maximum_drawdown(close.iloc[-252:]))
+
+            # Calmar ratio (CAGR approximation using 1Y simple return)
+            ret_1y = self._period_return(close, 252)
+            mdd = ms.get("max_drawdown_1y")
+            if ret_1y is not None and mdd is not None and mdd != 0:
+                ms.set("calmar_ratio", QuantEngine.calmar_ratio(ret_1y, mdd))
+
+            # Momentum 12-1: 12-month return excl. last month (AQR style, avoids reversal)
+            ret_12m = self._period_return(close, 252)
+            ret_1m  = self._period_return(close, 21)
+            if ret_12m is not None and ret_1m is not None and (1 + ret_1m) != 0:
+                ms.set("momentum_12_1", ((1 + ret_12m) / (1 + ret_1m)) - 1)
+
+            # 52-week high proximity (1.0 = at all-time 1Y high)
+            high_52w = float(close.iloc[-252:].max())
+            current  = float(close.iloc[-1])
+            if high_52w > 0:
+                ms.set("high_52w_proximity", round(current / high_52w, 4))
+
+        # Omega Ratio (uses all available history, 2Y)
+        if len(daily_returns) >= 60:
+            ms.set("omega_ratio", QuantEngine.omega_ratio(daily_returns))
+
+        # Wilder RSI-14
+        if len(close) >= 28:
+            ms.set("rsi_14", QuantEngine.rsi(close.values))
 
         # ── Beta & relative strength ──────────────────────────────────────────
         if benchmark is not None and not benchmark.empty:
@@ -250,9 +277,11 @@ class MetricsEngine:
             ms.set("current_ratio", curr_assets / curr_liab)
 
         # ── Return metrics ────────────────────────────────────────────────────
-        ms.set("roic", info.get("returnOnEquity"))  # yfinance doesn't expose ROIC directly
+        # NOTE: roe and roa from info dict (yfinance provides these)
         ms.set("roe", info.get("returnOnEquity"))
         ms.set("roa", info.get("returnOnAssets"))
+        # roic is NOT set here — it is properly computed below using
+        # financial statements. Setting it from info would use ROE by mistake.
 
         # Better ROIC approximation: EBIT*(1-tax) / (Equity + Debt - Cash)
         total_equity = latest(get(raw.balance_sheet, "Stockholders Equity", "Total Stockholder Equity", "Common Stock Equity"))
@@ -379,10 +408,17 @@ class MetricsEngine:
     # ── 5. Composite Scores ───────────────────────────────────────────────────
 
     def _compute_composite_scores(self, ms: MetricSet, raw: RawTickerData) -> None:
-        ms.set("piotroski_f_score", self._piotroski(ms, raw))
-        ms.set("altman_z_score", self._altman_z(ms, raw))
+        ms.set("piotroski_f_score",      self._piotroski(ms, raw))
+        ms.set("altman_z_score",         self._altman_z(ms, raw))
         ms.set("earnings_quality_score", self._earnings_quality(ms))
-        ms.set("overall_quality_score", self._overall_quality(ms))
+        ms.set("overall_quality_score",  self._overall_quality(ms))
+        # --- New professional composite scores ---
+        ms.set("beneish_m_score",        self._beneish_m_score(ms, raw))
+        magic_ey, magic_roc = self._magic_formula(ms, raw)
+        ms.set("magic_formula_ey",   magic_ey)
+        ms.set("magic_formula_roc",  magic_roc)
+        ms.set("quality_factor_score",   self._quality_factor(ms, raw))
+        ms.set("capital_allocation_score", self._capital_allocation_score(ms, raw))
 
     def _piotroski(self, ms: MetricSet, raw: RawTickerData) -> Optional[int]:
         """
@@ -573,6 +609,314 @@ class MetricsEngine:
 
         total = sum(s for _, s in sub_scores) / len(sub_scores)
         return round(total, 2)
+
+    # ── New Professional Composite Scores ────────────────────────────────────
+
+    def _beneish_m_score(self, ms: MetricSet, raw: RawTickerData) -> Optional[float]:
+        """
+        Beneish M-Score (1999) — forensic accounting manipulation detector.
+        M > -1.78  → likely manipulator (red flag).
+        M < -2.22  → likely not a manipulator.
+        -1.78..−2.22 → grey zone.
+        """
+        try:
+            get    = YFinanceFetcher.get_statement_row
+            latest = YFinanceFetcher.latest_value
+            prior  = YFinanceFetcher.value_n_periods_ago
+
+            sales_t  = latest(get(raw.income_stmt, "Total Revenue"))
+            sales_t1 = prior(get(raw.income_stmt, "Total Revenue"), 1)
+            ta_t     = latest(get(raw.balance_sheet, "Total Assets"))
+            ta_t1    = prior(get(raw.balance_sheet, "Total Assets"), 1)
+
+            if not all([sales_t, sales_t1, ta_t, ta_t1]):
+                return None
+            if sales_t <= 0 or sales_t1 <= 0 or ta_t <= 0:
+                return None
+
+            signals = 0
+
+            # 1. DSRI — Days Sales in Receivables Index
+            recv_t  = latest(get(raw.balance_sheet, "Net Receivables", "Accounts Receivable"))
+            recv_t1 = prior(get(raw.balance_sheet, "Net Receivables", "Accounts Receivable"), 1)
+            dsri = 1.0
+            if recv_t is not None and recv_t1 is not None and sales_t1 > 0 and recv_t1 > 0:
+                dsri = (recv_t / sales_t) / (recv_t1 / sales_t1)
+                signals += 1
+
+            # 2. GMI — Gross Margin Index (prior GM / current GM; >1 = deteriorating)
+            cogs_t  = latest(get(raw.income_stmt, "Cost Of Revenue", "Cost of Goods Sold"))
+            cogs_t1 = prior(get(raw.income_stmt, "Cost Of Revenue", "Cost of Goods Sold"), 1)
+            gmi = 1.0
+            if cogs_t is not None and cogs_t1 is not None:
+                gm_t  = (sales_t  - cogs_t)  / sales_t  if sales_t  > 0 else 0.0
+                gm_t1 = (sales_t1 - cogs_t1) / sales_t1 if sales_t1 > 0 else 0.0
+                if gm_t > 0:
+                    gmi = gm_t1 / gm_t
+                    signals += 1
+
+            # 3. AQI — Asset Quality Index
+            ca_t   = latest(get(raw.balance_sheet, "Current Assets", "Total Current Assets"))
+            ca_t1  = prior(get(raw.balance_sheet, "Current Assets", "Total Current Assets"), 1)
+            ppe_t  = latest(get(raw.balance_sheet, "Net PPE", "Property Plant Equipment Net"))
+            ppe_t1 = prior(get(raw.balance_sheet, "Net PPE", "Property Plant Equipment Net"), 1)
+            aqi = 1.0
+            if all(v is not None for v in [ca_t, ca_t1, ppe_t, ppe_t1]):
+                q_t  = 1 - (ca_t  + ppe_t)  / ta_t
+                q_t1 = 1 - (ca_t1 + ppe_t1) / ta_t1
+                if q_t1 != 0:
+                    aqi = q_t / q_t1
+                    signals += 1
+
+            # 4. SGI — Sales Growth Index (>1 = high growth, often precedes manipulation)
+            sgi = sales_t / sales_t1
+            signals += 1
+
+            # 5. DEPI — Depreciation Index (>1 = slowing depreciation rate)
+            dep_t  = latest(get(raw.cash_flow, "Depreciation", "Depreciation And Amortization"))
+            dep_t1 = prior(get(raw.cash_flow, "Depreciation", "Depreciation And Amortization"), 1)
+            depi = 1.0
+            if all(v is not None for v in [dep_t, dep_t1, ppe_t, ppe_t1]):
+                dr_t  = dep_t  / (ppe_t  + dep_t)  if (ppe_t  + dep_t)  > 0 else 0.0
+                dr_t1 = dep_t1 / (ppe_t1 + dep_t1) if (ppe_t1 + dep_t1) > 0 else 0.0
+                if dr_t > 0:
+                    depi = dr_t1 / dr_t
+                    signals += 1
+
+            # 6. SGAI — SGA Index
+            sga_t  = latest(get(raw.income_stmt, "Selling General Administrative",
+                                "General And Administrative Expense"))
+            sga_t1 = prior(get(raw.income_stmt, "Selling General Administrative",
+                               "General And Administrative Expense"), 1)
+            sgai = 1.0
+            if sga_t is not None and sga_t1 is not None and sga_t1 > 0 and sales_t1 > 0:
+                sgai = (sga_t / sales_t) / (sga_t1 / sales_t1)
+                signals += 1
+
+            # 7. LVGI — Leverage Index
+            ltd_t  = latest(get(raw.balance_sheet, "Long Term Debt"))
+            ltd_t1 = prior(get(raw.balance_sheet, "Long Term Debt"), 1)
+            cl_t   = latest(get(raw.balance_sheet, "Current Liabilities", "Total Current Liabilities"))
+            cl_t1  = prior(get(raw.balance_sheet, "Current Liabilities", "Total Current Liabilities"), 1)
+            lvgi = 1.0
+            if all(v is not None for v in [ltd_t, ltd_t1, cl_t, cl_t1]):
+                lev_t  = (ltd_t  + cl_t)  / ta_t
+                lev_t1 = (ltd_t1 + cl_t1) / ta_t1
+                if lev_t1 > 0:
+                    lvgi = lev_t / lev_t1
+                    signals += 1
+
+            # 8. TATA — Total Accruals to Total Assets
+            ni    = latest(get(raw.income_stmt, "Net Income"))
+            op_cf = latest(get(raw.cash_flow, "Operating Cash Flow",
+                               "Total Cash From Operating Activities"))
+            tata = 0.0
+            if ni is not None and op_cf is not None:
+                tata = (ni - op_cf) / ta_t
+                signals += 1
+
+            if signals < 4:
+                return None  # Insufficient data
+
+            m = (-4.840
+                 + 0.920 * dsri
+                 + 0.528 * gmi
+                 + 0.404 * aqi
+                 + 0.892 * sgi
+                 + 0.115 * depi
+                 - 0.172 * sgai
+                 + 4.679 * tata
+                 - 0.327 * lvgi)
+            return round(m, 3)
+        except Exception as e:
+            logger.debug(f"[MetricsEngine] Beneish M-Score failed: {e}")
+            return None
+
+    def _magic_formula(
+        self, ms: MetricSet, raw: RawTickerData
+    ) -> tuple[Optional[float], Optional[float]]:
+        """
+        Greenblatt Magic Formula components (2006 'The Little Book That Beats the Market').
+        Returns (earnings_yield, magic_roc).
+          EY  = EBIT / Enterprise Value        (cheap = high EY)
+          ROC = EBIT / (Net Working Capital + Net Fixed Assets)  (quality = high ROC)
+        """
+        try:
+            get    = YFinanceFetcher.get_statement_row
+            latest = YFinanceFetcher.latest_value
+
+            ebit = latest(get(raw.income_stmt, "EBIT", "Operating Income"))
+            ev   = ms.get("enterprise_value") or raw.info.get("enterpriseValue")
+
+            ey = None
+            if ebit and ev and ev > 0:
+                ey = round(ebit / ev, 4)   # e.g. 0.08 = 8% earnings yield
+
+            magic_roc = None
+            ca   = latest(get(raw.balance_sheet, "Current Assets", "Total Current Assets"))
+            cl   = latest(get(raw.balance_sheet, "Current Liabilities", "Total Current Liabilities"))
+            ppe  = latest(get(raw.balance_sheet, "Net PPE", "Property Plant Equipment Net"))
+            if ebit and ca is not None and cl is not None and ppe is not None:
+                nwc            = ca - cl
+                capital        = max(nwc, 0) + max(ppe, 0)
+                if capital > 0:
+                    magic_roc = round(ebit / capital, 4)
+
+            return ey, magic_roc
+        except Exception as e:
+            logger.debug(f"[MetricsEngine] Magic Formula failed: {e}")
+            return None, None
+
+    def _quality_factor(self, ms: MetricSet, raw: RawTickerData) -> Optional[float]:
+        """
+        Quality-Minus-Junk (QMJ) style quality composite (0–10).
+        Based on Asness, Frazzini & Pedersen (2018) AQR white paper.
+        Three equal-weighted pillars: Profitability, Safety, Growth.
+        Each pillar is an average of normalised sub-signals (0–1 each).
+        """
+        get    = YFinanceFetcher.get_statement_row
+        latest = YFinanceFetcher.latest_value
+
+        pillars: list[tuple[str, float]] = []
+
+        # ── Pillar 1: Profitability ──────────────────────────────────────────
+        prof: list[float] = []
+
+        # GPOA = Gross Profit / Total Assets  (Novy-Marx 2013)
+        gp = latest(get(raw.income_stmt, "Gross Profit"))
+        ta = latest(get(raw.balance_sheet, "Total Assets"))
+        if gp is not None and ta and ta > 0:
+            prof.append(min(1.0, max(0.0, (gp / ta) * 3)))  # 33% → 1.0
+
+        roe = ms.get("roe")
+        if roe is not None:
+            prof.append(min(1.0, max(0.0, roe * 5)))          # 20% ROE → 1.0
+
+        roa = ms.get("roa")
+        if roa is not None:
+            prof.append(min(1.0, max(0.0, roa * 10)))         # 10% ROA → 1.0
+
+        # CFOA = Operating CF / Total Assets
+        op_cf = latest(get(raw.cash_flow, "Operating Cash Flow",
+                          "Total Cash From Operating Activities"))
+        if op_cf is not None and ta and ta > 0:
+            prof.append(min(1.0, max(0.0, (op_cf / ta) * 5))) # 20% → 1.0
+
+        gmar = ms.get("gross_margin")
+        if gmar is not None:
+            prof.append(min(1.0, max(0.0, gmar)))              # gross margin as-is
+
+        # Accruals quality (Sloan 1996): low accruals = high cash earnings quality
+        ni = latest(get(raw.income_stmt, "Net Income"))
+        if ni is not None and op_cf is not None and ta and ta > 0:
+            accruals    = (ni - op_cf) / ta
+            acc_score   = max(0.0, min(1.0, 0.5 - accruals * 5))
+            prof.append(acc_score)
+
+        if prof:
+            pillars.append(("profitability", sum(prof) / len(prof)))
+
+        # ── Pillar 2: Safety ────────────────────────────────────────────────
+        safety: list[float] = []
+
+        # Low beta — Betting Against Beta (Frazzini & Pedersen 2014)
+        beta = ms.get("beta")
+        if beta is not None:
+            beta_score = max(0.0, min(1.0, 1.0 - beta * 0.5))  # β=0→1.0, β=2→0
+            safety.append(beta_score)
+
+        # Low leverage
+        nde = ms.get("net_debt_to_ebitda")
+        if nde is not None:
+            safety.append(max(0.0, min(1.0, 1.0 - max(nde, 0) * 0.2)))  # 0x→1, 5x→0
+
+        # Interest coverage adequacy
+        ic = ms.get("interest_coverage")
+        if ic is not None:
+            safety.append(max(0.0, min(1.0, ic / 10.0)))  # ≥10x→1, 0→0
+
+        # Low volatility (BAB factor component)
+        vol = ms.get("volatility_90d") or ms.get("volatility_30d")
+        if vol is not None:
+            # 15% annual vol → 1.0, 60%+ → 0.0
+            vol_score = max(0.0, min(1.0, 1.0 - (vol - 0.15) / 0.45))
+            safety.append(vol_score)
+
+        if safety:
+            pillars.append(("safety", sum(safety) / len(safety)))
+
+        # ── Pillar 3: Growth ────────────────────────────────────────────────
+        growth: list[float] = []
+
+        rev_g = ms.get("revenue_growth_yoy")
+        if rev_g is not None:
+            growth.append(min(1.0, max(0.0, (rev_g + 0.10) / 0.50)))  # −10%→0, 40%→1
+
+        rcagr = ms.get("revenue_cagr_3y")
+        if rcagr is not None:
+            growth.append(min(1.0, max(0.0, (rcagr + 0.05) / 0.35)))  # −5%→0, 30%→1
+
+        eps_g = ms.get("eps_growth_yoy")
+        if eps_g is not None:
+            growth.append(min(1.0, max(0.0, (eps_g + 0.10) / 0.60)))  # −10%→0, 50%→1
+
+        fcf_g = ms.get("fcf_growth_yoy")
+        if fcf_g is not None:
+            growth.append(min(1.0, max(0.0, (fcf_g + 0.10) / 0.50)))
+
+        if growth:
+            pillars.append(("growth", sum(growth) / len(growth)))
+
+        if not pillars:
+            return None
+
+        combined = sum(s for _, s in pillars) / len(pillars)
+        return round(combined * 10.0, 2)
+
+    def _capital_allocation_score(self, ms: MetricSet, raw: RawTickerData) -> Optional[float]:
+        """
+        Capital allocation quality score (0–10).
+        Measures: ROIC vs WACC spread, shareholder returns via buybacks,
+        and dividend sustainability via FCF payout ratio.
+        """
+        get    = YFinanceFetcher.get_statement_row
+        latest = YFinanceFetcher.latest_value
+        info   = raw.info
+        scores: list[tuple[str, float]] = []
+
+        # ── ROIC vs estimated WACC (value creation spread) ──────────────────
+        roic = ms.get("roic")
+        beta = ms.get("beta") or 1.0
+        # Simplified CAPM WACC (equity-only proxy): rf=4%, ERP=5.5%
+        wacc = 0.04 + max(0.0, beta) * 0.055
+        if roic is not None:
+            spread = roic - wacc
+            # −5% spread → 0, 0% → 5, +15% → 10
+            spread_score = max(0.0, min(10.0, 5.0 + spread * 40))
+            scores.append(("roic_wacc", spread_score))
+
+        # ── Share count trend (buybacks = shareholder-friendly) ──────────────
+        shares_out   = info.get("sharesOutstanding")
+        shares_float = info.get("floatShares")
+        if shares_out and shares_float and shares_out > 0:
+            dilution     = shares_float / shares_out
+            # dilution ≈ 1 → neutral (8), < 1 → buybacks (10), > 1.1 → dilution (0)
+            buyback_score = max(0.0, min(10.0, 10.0 - (dilution - 0.85) * 40))
+            scores.append(("buyback", buyback_score))
+
+        # ── FCF payout sustainability ────────────────────────────────────────
+        fcf = ms.get("free_cash_flow")
+        dividends = latest(get(raw.cash_flow, "Cash Dividends Paid",
+                               "Common Stock Dividend Paid"))
+        if fcf and fcf > 0 and dividends is not None:
+            payout_ratio = abs(dividends) / fcf
+            # 0% → 10, 50% → 7.5, 100% → 5, >100% → 0 (unsustainable)
+            payout_score = max(0.0, min(10.0, 10.0 - payout_ratio * 5))
+            scores.append(("payout", payout_score))
+
+        if not scores:
+            return None
+        return round(sum(s for _, s in scores) / len(scores), 2)
 
     # ── Utility ───────────────────────────────────────────────────────────────
 

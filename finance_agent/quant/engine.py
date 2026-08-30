@@ -277,3 +277,136 @@ class QuantEngine:
             "base_median_return": float(np.median(mc_returns[(mc_returns > bear_threshold) & (mc_returns < bull_threshold)])) if base > 0 else 0.05,
             "bull_median_return": float(np.median(mc_returns[mc_returns >= bull_threshold])) if bull > 0 else bull_threshold,
         }
+
+    # ── Institutional Risk Metrics ─────────────────────────────────────────────
+
+    @staticmethod
+    def calmar_ratio(cagr: float, max_drawdown: float) -> Optional[float]:
+        """Calmar Ratio = CAGR / |Max Drawdown|. Higher = better risk-adj return."""
+        if max_drawdown == 0:
+            return None
+        return float(cagr / abs(max_drawdown))
+
+    @staticmethod
+    def omega_ratio(
+        daily_returns: pd.Series | np.ndarray,
+        threshold: float = 0.0,
+    ) -> float:
+        """
+        Omega Ratio = sum(gains above threshold) / sum(losses below threshold).
+        Threshold is a daily return. Values > 1 are desirable.
+        """
+        arr = np.array(daily_returns, dtype=float)
+        gains  = arr[arr > threshold] - threshold
+        losses = threshold - arr[arr <= threshold]
+        if losses.sum() == 0:
+            return float("inf")
+        return float(gains.sum() / losses.sum())
+
+    @staticmethod
+    def conditional_var(
+        daily_returns: pd.Series | np.ndarray,
+        confidence: float = 0.95,
+    ) -> float:
+        """
+        Conditional VaR (CVaR / Expected Shortfall) at given confidence.
+        Returns the expected loss in the worst (1-confidence) fraction of days.
+        Result is negative (e.g. -0.03 = -3% average daily loss in tail).
+        """
+        arr = np.array(daily_returns, dtype=float)
+        var_threshold = np.percentile(arr, (1 - confidence) * 100)
+        tail = arr[arr <= var_threshold]
+        return float(np.mean(tail)) if len(tail) > 0 else float(var_threshold)
+
+    @staticmethod
+    def information_ratio(
+        portfolio_returns: pd.Series | np.ndarray,
+        benchmark_returns: pd.Series | np.ndarray,
+    ) -> Optional[float]:
+        """
+        Information Ratio = annualised alpha / annualised tracking error.
+        Measures manager skill (or factor alpha) per unit of active risk.
+        """
+        p = np.array(portfolio_returns, dtype=float)
+        b = np.array(benchmark_returns, dtype=float)
+        n = min(len(p), len(b))
+        if n < 20:
+            return None
+        excess = p[:n] - b[:n]
+        te = float(np.std(excess, ddof=1)) * math.sqrt(252)
+        alpha = float(np.mean(excess)) * 252
+        if te == 0:
+            return None
+        return float(alpha / te)
+
+    @staticmethod
+    def treynor_ratio(
+        daily_returns: pd.Series | np.ndarray,
+        beta: float,
+        risk_free_annual: float = 0.04,
+        trading_days: int = 252,
+    ) -> Optional[float]:
+        """
+        Treynor Ratio = (Annualised Return - Rf) / Beta.
+        Measures systematic-risk-adjusted excess return.
+        """
+        if beta == 0 or math.isnan(beta):
+            return None
+        arr = np.array(daily_returns, dtype=float)
+        annual_ret = float((1 + np.mean(arr)) ** trading_days - 1)
+        return float((annual_ret - risk_free_annual) / beta)
+
+    @staticmethod
+    def rsi(
+        prices: pd.Series | np.ndarray,
+        period: int = 14,
+    ) -> Optional[float]:
+        """
+        Wilder's Relative Strength Index (0–100).
+        >70 = overbought, <30 = oversold.
+        Uses exponential smoothing per Wilder (1978), not simple moving average.
+        """
+        arr = np.array(prices, dtype=float)
+        if len(arr) < period + 1:
+            return None
+        deltas = np.diff(arr)
+        gains  = np.where(deltas > 0,  deltas, 0.0)
+        losses = np.where(deltas < 0, -deltas, 0.0)
+        if len(gains) < period:
+            return None
+
+        # Seed with simple averages
+        avg_gain = float(np.mean(gains[:period]))
+        avg_loss = float(np.mean(losses[:period]))
+
+        # Wilder smoothing (EMA with α = 1/period)
+        for i in range(period, len(gains)):
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+
+        if avg_loss == 0:
+            return 100.0
+        rs = avg_gain / avg_loss
+        return round(float(100 - 100 / (1 + rs)), 2)
+
+    @staticmethod
+    def z_score_normalise(values: list) -> list:
+        """
+        Cross-sectional z-score normalisation for factor ranking.
+        None values are preserved as None. Result: mean=0, std≈1 over valid values.
+        Used to compare stocks within a sector on the same scale.
+        """
+        valid = [
+            v for v in values
+            if v is not None and not (isinstance(v, float) and math.isnan(v))
+        ]
+        if len(valid) < 2:
+            return [None] * len(values)
+        mu    = float(np.mean(valid))
+        sigma = float(np.std(valid, ddof=1))
+        if sigma == 0:
+            return [0.0 if v is not None else None for v in values]
+        return [
+            round(float((v - mu) / sigma), 4) if v is not None else None
+            for v in values
+        ]
