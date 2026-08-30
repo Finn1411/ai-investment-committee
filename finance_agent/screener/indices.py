@@ -7,23 +7,35 @@ DAX 40 is kept as a hardcoded fallback (stable list).
 
 from __future__ import annotations
 
+import io
+import requests
 import pandas as pd
 from finance_agent.utils.logger import logger
+
+def _fetch_wiki_tickers(url: str, default_col: str = "Symbol") -> list[str]:
+    """Helper to fetch tickers from Wikipedia tables safely with a custom User-Agent."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    try:
+        html = requests.get(url, headers=headers, timeout=10).text
+        tables = pd.read_html(io.StringIO(html), header=0)
+        df = tables[0]
+        col = default_col if default_col in df.columns else "Ticker"
+        tickers = df[col].dropna().tolist()
+        # Clean: remove any random spaces or weird chars, convert dots to dashes for yfinance
+        return [str(t).strip().replace(".", "-") for t in tickers]
+    except Exception as e:
+        logger.error(f"[Indices] Failed fetching from {url}: {e}")
+        return []
 
 
 def get_sp500() -> list[str]:
     """Fetch S&P 500 constituents from Wikipedia."""
-    try:
-        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        tables = pd.read_html(url, header=0)
-        df = tables[0]
-        tickers = df["Symbol"].tolist()
-        # yfinance uses dashes not dots (BRK.B → BRK-B)
-        tickers = [t.replace(".", "-") for t in tickers]
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    tickers = _fetch_wiki_tickers(url)
+    if tickers:
         logger.info(f"[Indices] Loaded S&P 500: {len(tickers)} tickers from Wikipedia")
         return tickers
-    except Exception as e:
-        logger.error(f"[Indices] Failed to fetch S&P 500 from Wikipedia: {e}")
+    else:
         # Minimal fallback — top 30 by market cap
         return [
             "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","AVGO","BRK-B","LLY",
@@ -34,15 +46,17 @@ def get_sp500() -> list[str]:
 
 def get_nasdaq100() -> list[str]:
     """Fetch NASDAQ-100 constituents from Wikipedia."""
+    url = "https://en.wikipedia.org/wiki/Nasdaq-100"
+    headers = {"User-Agent": "Mozilla/5.0"}
     try:
-        url = "https://en.wikipedia.org/wiki/Nasdaq-100"
-        tables = pd.read_html(url, header=0)
+        html = requests.get(url, headers=headers, timeout=10).text
+        tables = pd.read_html(io.StringIO(html), header=0)
         # Find the table that has a 'Ticker' or 'Symbol' column
         for df in tables:
-            cols = [c.lower() for c in df.columns]
+            cols = [str(c).lower() for c in df.columns]
             if "ticker" in cols or "symbol" in cols:
                 col = "Ticker" if "Ticker" in df.columns else "Symbol"
-                tickers = [t.replace(".", "-") for t in df[col].dropna().tolist()]
+                tickers = [str(t).strip().replace(".", "-") for t in df[col].dropna().tolist()]
                 logger.info(f"[Indices] Loaded NASDAQ-100: {len(tickers)} tickers from Wikipedia")
                 return tickers[:100]
         raise ValueError("No ticker column found")
@@ -68,10 +82,25 @@ def get_dax40() -> list[str]:
     ]
 
 
+def get_sp1500() -> list[str]:
+    """
+    S&P 1500 Composite index (Broad US Market).
+    Aggregates S&P 500, S&P 400 (MidCap), and S&P 600 (SmallCap).
+    """
+    sp500 = get_sp500()
+    sp400 = _fetch_wiki_tickers("https://en.wikipedia.org/wiki/List_of_S%26P_400_companies")
+    sp600 = _fetch_wiki_tickers("https://en.wikipedia.org/wiki/List_of_S%26P_600_companies")
+    
+    combined = sorted(list(set(sp500 + sp400 + sp600)))
+    logger.info(f"[Indices] Loaded S&P 1500 Composite: {len(combined)} tickers")
+    return combined
+
+
 # Registry: index_id → (display_name, getter_function, approx_size)
 INDEX_REGISTRY: dict[str, tuple[str, callable, int]] = {
     "sp500":    ("S&P 500",    get_sp500,    504),
     "nasdaq100":("NASDAQ 100", get_nasdaq100, 100),
+    "sp1500":   ("S&P 1500 (Broad US)", get_sp1500, 1500),
     "dax40":   ("DAX 40",    get_dax40,    40),
 }
 
