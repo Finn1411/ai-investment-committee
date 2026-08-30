@@ -103,23 +103,83 @@ class ScreenerEngine:
     No LLM calls — pure deterministic factor model.
     """
 
-    # 7-factor weights
-    FACTOR_WEIGHTS: dict[str, float] = {
-        "quality":       0.25,
-        "value":         0.20,
-        "momentum":      0.20,
-        "profitability": 0.15,
-        "safety":        0.10,
-        "growth":        0.05,
-        "risk_adj":      0.05,
+    # ── Horizon-aware factor weights ──────────────────────────────────────────
+    #
+    # Factor predictability decays differently with horizon (academic consensus):
+    #   Momentum   → strong short-term, mean-reverts long-term
+    #   Quality    → weak short-term, very strong long-term (compound quality)
+    #   Value      → weak short-term (value traps persist), strong long-term
+    #   Profitability → stable medium-to-long
+    #   Safety     → stable across all horizons
+    #   Growth     → stronger medium-to-long (needs time to compound)
+    #   Risk-Adj   → more relevant short-term (drawdown matters more near-term)
+    #
+    # Reference: Asness et al. (2015) "Fact, Fiction and Momentum Investing";
+    #            Novy-Marx (2013) quality horizon analysis.
+
+    WEIGHTS_BY_HORIZON: dict[str, dict[str, float]] = {
+        # 3-month: Momentum + technical signals dominate
+        "3M": {
+            "quality":       0.15,
+            "value":         0.10,
+            "momentum":      0.35,
+            "profitability": 0.10,
+            "safety":        0.15,
+            "growth":        0.05,
+            "risk_adj":      0.10,
+        },
+        # 6-month: momentum still elevated
+        "6M": {
+            "quality":       0.18,
+            "value":         0.15,
+            "momentum":      0.28,
+            "profitability": 0.15,
+            "safety":        0.12,
+            "growth":        0.06,
+            "risk_adj":      0.06,
+        },
+        # 12-month: balanced (default)
+        "12M": {
+            "quality":       0.25,
+            "value":         0.20,
+            "momentum":      0.20,
+            "profitability": 0.15,
+            "safety":        0.10,
+            "growth":        0.05,
+            "risk_adj":      0.05,
+        },
+        # 3-5 year: fundamentals dominate, momentum fades
+        "3-5Y": {
+            "quality":       0.35,
+            "value":         0.25,
+            "momentum":      0.10,
+            "profitability": 0.18,
+            "safety":        0.07,
+            "growth":        0.03,
+            "risk_adj":      0.02,
+        },
     }
 
-    # Minimum stocks per sector for within-sector z-scoring
-    # (falls back to global z-score for smaller sectors)
-    MIN_SECTOR_SIZE = 5
+    # Map Horizon enum values to weight keys
+    _HORIZON_KEY_MAP: dict[str, str] = {
+        "3 months":   "3M",
+        "6 months":   "6M",
+        "3M":         "3M",
+        "6M":         "6M",
+        "12 months":  "12M",
+        "12M":        "12M",
+        "3-5 years":  "3-5Y",
+        "3-5Y":       "3-5Y",
+    }
+
+    def _get_weights(self, horizon: Horizon) -> dict[str, float]:
+        """Return factor weights appropriate for the given investment horizon."""
+        key = self._HORIZON_KEY_MAP.get(horizon.value, "12M")
+        return self.WEIGHTS_BY_HORIZON[key]
 
     def __init__(self, max_workers: int = 12) -> None:
-        self.max_workers = max_workers
+        self.max_workers  = max_workers
+        self.MIN_SECTOR_SIZE = 5   # min stocks per sector for within-sector z-scoring
         self._fetcher = YFinanceFetcher()
         self._metrics = MetricsEngine()
 
@@ -170,7 +230,7 @@ class ScreenerEngine:
         valid_pairs = [(r, f) for r, f in pairs if r.error is None]
         error_pairs = [(r, f) for r, f in pairs if r.error is not None]
 
-        self._apply_sector_normalisation(valid_pairs)
+        self._apply_sector_normalisation(valid_pairs, horizon)
 
         all_results = [r for r, _ in valid_pairs] + [r for r, _ in error_pairs]
         ranked = sorted(
@@ -324,19 +384,15 @@ class ScreenerEngine:
     def _apply_sector_normalisation(
         self,
         pairs: list[tuple[ScreenerResult, dict[str, float | None]]],
+        horizon: Horizon = Horizon.TWELVE_MONTHS,
     ) -> None:
         """
         In-place update of ScreenerResult.screener_score for all valid tickers.
 
-        Algorithm:
-          1. Group ticker indices by sector.
-          2. For each of the 7 factors, z-score within sector.
-             If sector has < MIN_SECTOR_SIZE tickers with valid data,
-             fall back to the global z-score for those tickers.
-          3. Winsorise z-scores to [-3, +3].
-          4. Weighted average of available z-scores.
-          5. Map composite z ∈ [-3, +3] → score ∈ [0, 10].
+        Factor weights shift by horizon (momentum decays, quality compounds).
+        Within each GICS sector stocks are z-scored before combining.
         """
+        weights = self._get_weights(horizon)
         n             = len(pairs)
         factors_list  = [f for _, f in pairs]
         results_list  = [r for r, _ in pairs]
@@ -346,7 +402,7 @@ class ScreenerEngine:
         for i, r in enumerate(results_list):
             sector_indices[r.sector].append(i)
 
-        factor_names  = list(self.FACTOR_WEIGHTS.keys())
+        factor_names  = list(weights.keys())
         normalised:   list[dict[str, float | None]] = [{} for _ in range(n)]
 
         for factor in factor_names:
@@ -369,12 +425,13 @@ class ScreenerEngine:
                         normalised[i][factor] = global_z[i]
 
         # Combine with weights → composite z → 0-10 score
+        factor_names = list(weights.keys())
         for i, result in enumerate(results_list):
             z_dict = normalised[i]
             total_weight  = 0.0
             weighted_sum  = 0.0
 
-            for factor, weight in self.FACTOR_WEIGHTS.items():
+            for factor, weight in weights.items():
                 z = z_dict.get(factor)
                 if z is not None and not (isinstance(z, float) and math.isnan(z)):
                     z_clamped     = max(-3.0, min(3.0, z))   # Winsorise
