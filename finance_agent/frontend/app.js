@@ -718,29 +718,42 @@ function renderScreenerResults(stocks) {
         const sc  = s.screener_score || 0;
         const cls = sc >= 7 ? 'hi' : sc >= 5 ? 'mid' : 'lo';
 
-        const evStr = s.expected_value != null ? fmtPct(s.expected_value) : '—';
-        const evCls = s.expected_value != null ? fmtRetClass(s.expected_value) : '';
+        // Earnings Yield (EBIT/EV) — better than scenario EV% for quick screening
+        const eyRaw = s.earnings_yield;
+        const eyStr = eyRaw != null ? (eyRaw * 100).toFixed(1) + '%' : '—';
+        const eyCls = eyRaw != null ? fmtRetClass(eyRaw) : '';
 
-        const pf    = s.piotroski;
+        // Piotroski badge
+        const pf = s.piotroski;
         const pfHtml = pf != null
             ? `<span class="piotroski-badge ${pf >= 7 ? 'hi' : pf >= 4 ? 'mid' : 'lo'}">${pf}</span>`
             : '—';
 
-        const momStr = s.momentum_1y != null ? fmtPct(s.momentum_1y) : '—';
-        const momCls = s.momentum_1y != null ? fmtRetClass(s.momentum_1y) : '';
+        // Momentum 12-1 (AQR standard), fallback to return_1y
+        const momRaw = s.momentum_12_1 ?? s.return_1y;
+        const momStr = momRaw != null ? fmtPct(momRaw) : '—';
+        const momCls = momRaw != null ? fmtRetClass(momRaw) : '';
 
-        const fpe = s.forward_pe != null ? s.forward_pe.toFixed(1) + 'x' : '—';
+        // ROIC
+        const roicRaw = s.roic;
+        const roicStr = roicRaw != null ? (roicRaw * 100).toFixed(1) + '%' : '—';
+        const roicCls = roicRaw != null ? fmtRetClass(roicRaw) : '';
+
+        // Beneish M-Score fraud flag
+        const bm = s.beneish_m;
+        const bmFlag = bm != null && bm > -1.78
+            ? `<span title="Beneish M=${bm.toFixed(2)}: earnings manipulation risk" style="color:var(--danger);font-size:11px">&#9888;</span>`
+            : '';
 
         return `<tr>
             <td class="screener-rank">${i+1}</td>
-            <td><strong class="mono" style="font-size:14px">${s.ticker}</strong></td>
-            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-dim)">${s.name || '—'}</td>
+            <td><strong class="mono" style="font-size:14px">${s.ticker}</strong>${bmFlag}</td>
             <td style="font-size:11px;color:var(--text-muted)">${s.sector || '—'}</td>
             <td><span class="screener-score-pill ${cls}">${sc.toFixed(1)}</span></td>
-            <td class="${evCls} mono" style="font-size:13px">${evStr}</td>
+            <td class="${eyCls} mono" style="font-size:13px">${eyStr}</td>
             <td>${pfHtml}</td>
             <td class="${momCls} mono" style="font-size:13px">${momStr}</td>
-            <td class="mono" style="font-size:12px;color:var(--text-dim)">${fpe}</td>
+            <td class="${roicCls} mono" style="font-size:12px">${roicStr}</td>
             <td style="display:flex;gap:6px">
                 <button class="btn btn-sc-analyze" onclick="analyzeFromScreener('${s.ticker}')">
                     <i class="fa-solid fa-microchip"></i> Analyze
