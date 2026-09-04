@@ -177,7 +177,7 @@ class ScreenerEngine:
         key = self._HORIZON_KEY_MAP.get(horizon.value, "12M")
         return self.WEIGHTS_BY_HORIZON[key]
 
-    def __init__(self, max_workers: int = 12) -> None:
+    def __init__(self, max_workers: int = 8) -> None:
         self.max_workers  = max_workers
         self.MIN_SECTOR_SIZE = 5   # min stocks per sector for within-sector z-scoring
         self._fetcher = YFinanceFetcher()
@@ -249,12 +249,28 @@ class ScreenerEngine:
         horizon: Horizon,
     ) -> tuple[ScreenerResult, dict[str, float | None]]:
         """Fetch data, compute MetricSet, extract all factor raw values."""
+        import time
         result      = ScreenerResult(ticker=ticker)
         raw_factors: dict[str, float | None] = {}
 
         try:
             raw  = self._fetcher.fetch(ticker, price_period="2y")
             info = raw.info or {}
+
+            # ── Detect partial/throttled response and retry once ──────────────
+            # yfinance can return a truncated info dict (<20 keys) under heavy
+            # parallel load. If we have price data but sector/marketCap is
+            # missing, wait briefly and retry the fetch.
+            if (
+                raw.price_history is not None
+                and not raw.price_history.empty
+                and len(info) < 20
+                and info.get("sector") is None
+            ):
+                logger.debug(f"[Screener] {ticker} got partial info ({len(info)} keys), retrying...")
+                time.sleep(1.5)
+                raw  = self._fetcher.fetch(ticker, price_period="2y")
+                info = raw.info or {}
 
             result.name     = info.get("shortName", ticker)
             result.sector   = info.get("sector", "Unknown")
