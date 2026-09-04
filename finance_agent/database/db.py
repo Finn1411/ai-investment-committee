@@ -139,6 +139,7 @@ class PredictionORM(Base):
     horizon = Column(String(10), nullable=False)
     rating = Column(String(20), nullable=False)
     expected_return = Column(Float)
+    weighted_score = Column(Float, nullable=True)   # Committee composite 0-10
     confidence = Column(Float)
     thesis = Column(Text)
     key_risks = Column(Text)             # JSON list

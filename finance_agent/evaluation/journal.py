@@ -51,6 +51,7 @@ class PredictionJournal:
                 horizon=entry.horizon.value,
                 rating=entry.rating.value,
                 expected_return=entry.expected_return,
+                weighted_score=getattr(entry, 'weighted_score', None),
                 confidence=entry.confidence,
                 thesis=entry.thesis,
                 key_risks=json.dumps(entry.key_risks),
@@ -177,6 +178,7 @@ class PredictionJournal:
             horizon=horizon,
             rating=rating,
             expected_return=float(scenario_model.expected_value),
+            weighted_score=weighted_score,          # ← now stored
             confidence=confidence,
             thesis=thesis,
             key_risks=invalidation_criteria,

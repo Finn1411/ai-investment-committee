@@ -70,7 +70,7 @@ async function loadSidebarStats() {
         document.getElementById('sb-total').textContent = stats.total_predictions ?? '0';
         document.getElementById('sb-watchlist').textContent = watch.length ?? '0';
         document.getElementById('sb-hit').textContent =
-            stats.hit_rate != null ? (stats.hit_rate * 100).toFixed(0) + '%' : '—';
+            stats.avg_score != null ? stats.avg_score.toFixed(1) + '/10' : '—';
     } catch (_) {}
 }
 
@@ -301,11 +301,11 @@ async function loadJournal() {
         const stats = await statsRes.json();
         _allPredictions = await predsRes.json();
 
-        // Stats bar
-        document.getElementById('j-total').textContent   = stats.total_predictions ?? '—';
-        document.getElementById('j-hit').textContent     = stats.hit_rate != null ? (stats.hit_rate * 100).toFixed(0) + '%' : '—';
-        document.getElementById('j-brier').textContent   = stats.brier_score != null ? Number(stats.brier_score).toFixed(3) : '—';
-        document.getElementById('j-pending').textContent = stats.pending_reviews ?? '—';
+        // Stats bar — populated from real DB aggregates
+        document.getElementById('j-total').textContent    = stats.total_predictions ?? '—';
+        document.getElementById('j-avg-score').textContent = stats.avg_score != null ? stats.avg_score.toFixed(1) + '/10' : '—';
+        document.getElementById('j-avg-conf').textContent  = stats.avg_confidence != null ? stats.avg_confidence.toFixed(0) + '%' : '—';
+        document.getElementById('j-buy-rate').textContent  = stats.buy_rate != null ? stats.buy_rate.toFixed(0) + '%' : '—';
 
         renderJournal(_allPredictions);
     } catch (e) { console.error('Journal load error:', e); }
@@ -314,22 +314,22 @@ async function loadJournal() {
 function renderJournal(preds) {
     const tbody = document.getElementById('journal-table-body');
     if (!preds.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No predictions yet. Run an analysis to get started.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No predictions yet. Run an analysis to get started.</td></tr>`;
         return;
     }
     tbody.innerHTML = preds.map((p, i) => {
-        const actualStr = p.actual_return != null ? fmtPct(p.actual_return) : '—';
-        const actualCls = p.actual_return != null ? fmtRetClass(p.actual_return) : '';
-        const score     = p.expected_return != null ? Number(p.expected_return).toFixed(2) : '—';
+        const score    = p.expected_return != null ? Number(p.expected_return).toFixed(2) : '—';
+        const wScore   = p.weighted_score != null ? Number(p.weighted_score).toFixed(1) : '—';
+        const expRet   = p.expected_return != null ? fmtPct(p.expected_return) : '—';
+        const expCls   = p.expected_return != null ? fmtRetClass(p.expected_return) : '';
         return `<tr onclick="openJournalEntry('${p.id}')" title="Click to view full report">
             <td style="color:var(--text-muted);font-size:11px">#${p.seq || (i+1)}</td>
             <td><strong class="mono">${p.ticker}</strong></td>
             <td style="font-size:12px;color:var(--text-muted)">${p.date}</td>
             <td style="font-size:12px;color:var(--text-dim)">${p.horizon || '—'}</td>
             <td><span class="badge ${p.rating.toLowerCase()}">${p.rating}</span></td>
-            <td class="mono" style="font-size:12px">${score}</td>
-            <td class="${actualCls} mono" style="font-size:12px">${actualStr}</td>
-            <td style="font-size:11px;color:var(--text-muted)">${p.review_status || '—'}</td>
+            <td class="mono" style="font-size:12px">${wScore}</td>
+            <td class="${expCls} mono" style="font-size:12px">${expRet}</td>
         </tr>`;
     }).join('');
 }
@@ -358,7 +358,7 @@ document.getElementById('journal-clear-btn').addEventListener('click', async () 
         renderJournal([]);
         loadSidebarStats();
         // Reset journal stats
-        ['j-total','j-hit','j-brier','j-pending'].forEach(id => {
+        ['j-total','j-avg-score','j-avg-conf','j-buy-rate'].forEach(id => {
             document.getElementById(id).textContent = '—';
         });
     } catch (e) { toast('Failed to clear journal', 'error'); }
@@ -371,7 +371,7 @@ window.openJournalEntry = async (id) => {
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
         document.getElementById('drawer-title').textContent = `${data.ticker}`;
-        document.getElementById('drawer-subtitle').textContent = `${data.date || ''} · Historical Entry`;
+        document.getElementById('drawer-subtitle').textContent = `${data.analysis_date || ''} · Historical Entry`;
         renderReport(data.ticker, data);
     } catch (e) {
         closeDrawer();
@@ -487,7 +487,7 @@ function renderReport(ticker, data) {
     // Hero
     const score = data.weighted_score;
     const scoreEl = document.getElementById('rep-score');
-    const hasScore = score != null && score > 0;
+    const hasScore = score != null && !isNaN(score);
     scoreEl.textContent = hasScore ? Number(score).toFixed(1) : '--';
     scoreEl.style.color = !hasScore ? 'var(--text-muted)' : score >= 7 ? 'var(--score-hi)' : score >= 5 ? 'var(--score-mid)' : 'var(--score-lo)';
 
@@ -767,9 +767,9 @@ function renderScreenerResults(stocks) {
 }
 
 window.analyzeFromScreener = (ticker) => {
-    // Only analyze — do NOT auto-add to watchlist
+    // Analyze without auto-journaling (persist=false) — user can save manually
     openDrawer(ticker);
-    runAnalysis(ticker, document.getElementById('screener-horizon').value, true);
+    runAnalysis(ticker, document.getElementById('screener-horizon').value, false);
 };
 
 window.addToWatchlistFromScreener = async (ticker) => {

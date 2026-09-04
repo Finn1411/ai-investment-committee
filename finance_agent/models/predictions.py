@@ -50,6 +50,7 @@ class PredictionEntry(BaseModel):
     horizon: Horizon
     rating: Rating
     expected_return: float
+    weighted_score: Optional[float] = None  # Committee composite score (0-10)
     confidence: float = Field(ge=0.0, le=1.0)
     scenario_model: ScenarioModel
     thesis: str

@@ -172,10 +172,9 @@ def get_last_analyses():
                 .first()
             )
             if latest:
-                committee = json.loads(latest.committee_verdict_json) if latest.committee_verdict_json else {}
                 result[s.ticker] = {
                     "rating": latest.rating,
-                    "score": committee.get("weighted_score"),
+                    "score": latest.weighted_score,   # use dedicated column, not committee_verdict_json
                     "date": latest.analysis_date,
                     "horizon": latest.horizon,
                 }
@@ -183,18 +182,28 @@ def get_last_analyses():
 
 @app.get("/api/journal/stats")
 def get_journal_stats():
-    """Get system backtesting and calibration statistics"""
-    engine = BacktestEngine()
-    stats = engine.get_stats()
-    
-    journal = PredictionJournal()
-    j_stats = journal.summary_stats()
-    
-    # Merge stats
-    stats["total_predictions"] = j_stats["total_predictions"]
-    stats["pending_reviews"] = len(journal.get_pending_reviews())
-    
-    return stats
+    """Get journal statistics from available data."""
+    with get_session() as session:
+        total = session.query(PredictionORM).count()
+        if total == 0:
+            return {
+                "total_predictions": 0,
+                "avg_score": None,
+                "avg_confidence": None,
+                "buy_rate": None,
+            }
+        from sqlalchemy import func
+        avg_score = session.query(func.avg(PredictionORM.weighted_score)).scalar()
+        avg_conf  = session.query(func.avg(PredictionORM.confidence)).scalar()
+        buy_count = session.query(PredictionORM).filter(
+            PredictionORM.rating.in_(["BUY", "STRONG_BUY", "STRONG BUY"])
+        ).count()
+        return {
+            "total_predictions": total,
+            "avg_score":      round(avg_score, 2) if avg_score is not None else None,
+            "avg_confidence": round(avg_conf * 100, 1) if avg_conf is not None else None,
+            "buy_rate":       round(buy_count / total * 100, 1) if total > 0 else None,
+        }
 
 @app.get("/api/journal/predictions")
 def get_predictions():
@@ -211,9 +220,8 @@ def get_predictions():
                 "horizon": p.horizon,
                 "rating": p.rating,
                 "confidence": p.confidence,
-                "actual_return": p.actual_return,
-                "review_status": p.review_status,
-                "expected_return": p.expected_return
+                "weighted_score": p.weighted_score,
+                "expected_return": p.expected_return,
             })
         return result
 
@@ -237,12 +245,22 @@ def get_prediction_detail(id: str):
         scenarios = json.loads(p.scenario_model_json) if p.scenario_model_json else {}
         risks = json.loads(p.invalidation_criteria) if p.invalidation_criteria else []
         
-        # Translate to the format expected by renderReport
+        # Return the format expected by renderReport
+        # weighted_score: prefer the dedicated column (new), then fall back to committee_verdict_json
+        score = p.weighted_score
+        if score is None and committee:
+            score = committee.get("weighted_score")
+        # Final fallback: map rating label to approximate score for old entries
+        if score is None and p.rating:
+            score = {"STRONG_BUY": 9.0, "STRONG BUY": 9.0,
+                     "BUY": 7.5, "HOLD": 5.0, "SELL": 2.5,
+                     "STRONG_SELL": 1.0, "STRONG SELL": 1.0}.get(str(p.rating).upper())
+
         return {
             "ticker": p.ticker,
             "horizon": p.horizon,
             "analysis_date": p.analysis_date,
-            "weighted_score": committee.get("weighted_score") if committee else None,
+            "weighted_score": score,
             "rating": p.rating,
             "thesis": p.thesis or committee.get("synthesized_thesis", ""),
             "scenarios": scenarios,
